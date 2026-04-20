@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
+  BottomNavigation,
+  BottomNavigationAction,
   Box,
   Button,
   Card,
@@ -10,19 +12,22 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
+  Fab,
   IconButton,
   LinearProgress,
-  Tab,
-  Tabs,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import GavelIcon from '@mui/icons-material/Gavel';
 import HomeIcon from '@mui/icons-material/Home';
+import MapIcon from '@mui/icons-material/Map';
+import BuildIcon from '@mui/icons-material/Build';
+import GroupIcon from '@mui/icons-material/Group';
 import SaveIcon from '@mui/icons-material/Save';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import CropFreeIcon from '@mui/icons-material/CropFree';
 import { getDaimyo, getProvince, PROVINCES } from '../data/gameData';
 import type { Province } from '../data/gameData';
 import { getRetainersByDaimyo } from '../data/retainerData';
@@ -195,96 +200,240 @@ function resolveBattle(retainers: Retainer[], soldiers: number, target: Province
   };
 }
 
-// ─── リソース表示チップ ───────────────────────────────────
-function ResourceChip({ label, value, color }: { label: string; value: number | string; color: string }) {
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 64 }}>
-      <Typography sx={{ fontSize: '0.6rem', color: '#667788', letterSpacing: '0.05em' }}>{label}</Typography>
-      <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color }}>{value}</Typography>
-    </Box>
-  );
-}
+// ─── ゲームマップ（viewBox操作によるズーム・パン） ────────
+// CSS transform ではなく viewBox を操作することで、
+// ズーム時もSVGがベクター再描画され地名が常にシャープになる。
 
-// ─── ゲームマップ ─────────────────────────────────────────
+const FAB_STYLE = {
+  bgcolor: 'rgba(20,40,70,0.88)',
+  color: '#88aacc',
+  border: '1px solid rgba(80,130,200,0.3)',
+  boxShadow: 'none',
+  width: 40,
+  height: 40,
+  minHeight: 40,
+  '&:disabled': { bgcolor: 'rgba(15,25,45,0.7)', color: '#2a3a4a', border: '1px solid rgba(40,60,90,0.3)' },
+  '&:hover': { bgcolor: 'rgba(30,60,100,0.9)' },
+} as const;
+
+const VB_FULL = { x: 0, y: 0, w: 810, h: 930 };
+const MAP_AR = 810 / 930; // 地図の縦横比（固定）
+const MIN_VB_W = 810 / 5;  // 最大5倍ズーム
+
+type VB = typeof VB_FULL;
+
 function GameMap({
   ownedProvinces,
   daimyoColor,
   attackable,
   selectingTarget,
   onProvinceClick,
+  onCancelDispatch,
 }: {
   ownedProvinces: string[];
   daimyoColor: string;
   attackable: string[];
   selectingTarget: boolean;
   onProvinceClick?: (id: string) => void;
+  onCancelDispatch?: () => void;
 }) {
+  const [vb, setVb] = useState<VB>(VB_FULL);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasMovedRef = useRef(false);
+  const gestureRef = useRef<{
+    startTouches: { x: number; y: number }[];
+    startVb: VB;
+    display: { left: number; top: number; w: number; h: number };
+  } | null>(null);
+
+  // SVG要素内でコンテンツが実際に表示される領域（letterbox考慮）
+  const getDisplay = (rect: DOMRect) => {
+    const elAR = rect.width / rect.height;
+    if (elAR > MAP_AR) {
+      const dw = rect.height * MAP_AR;
+      return { left: (rect.width - dw) / 2, top: 0, w: dw, h: rect.height };
+    }
+    const dh = rect.width / MAP_AR;
+    return { left: 0, top: (rect.height - dh) / 2, w: rect.width, h: dh };
+  };
+
+  // 画面座標（コンテナ相対）→ SVG viewBox座標
+  const toSvg = (sx: number, sy: number, d: ReturnType<typeof getDisplay>, v: VB) => ({
+    x: v.x + ((sx - d.left) / d.w) * v.w,
+    y: v.y + ((sy - d.top) / d.h) * v.h,
+  });
+
+  const clampVb = (x: number, y: number, w: number, h: number): VB => ({
+    x: Math.max(0, Math.min(810 - w, x)),
+    y: Math.max(0, Math.min(930 - h, y)),
+    w, h,
+  });
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    hasMovedRef.current = false;
+    gestureRef.current = {
+      startTouches: Array.from(e.touches).map((t) => ({ x: t.clientX - rect.left, y: t.clientY - rect.top })),
+      startVb: { ...vb },
+      display: getDisplay(rect),
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!gestureRef.current) return;
+    const { startTouches, startVb, display } = gestureRef.current;
+    const containerRect = containerRef.current!.getBoundingClientRect();
+    const cur = Array.from(e.touches).map((t) => ({ x: t.clientX - containerRect.left, y: t.clientY - containerRect.top }));
+
+    if (cur.length === 1 && startTouches.length === 1) {
+      const dx = cur[0].x - startTouches[0].x;
+      const dy = cur[0].y - startTouches[0].y;
+      if (Math.hypot(dx, dy) > 5) hasMovedRef.current = true;
+      if (startVb.w >= 810 * 0.99) return; // 全体表示中はパン無効
+      // 画面移動量をSVG座標差に変換し逆方向にviewBox移動
+      const svgDx = (dx / display.w) * startVb.w;
+      const svgDy = (dy / display.h) * startVb.h;
+      setVb(clampVb(startVb.x - svgDx, startVb.y - svgDy, startVb.w, startVb.h));
+    } else if (cur.length >= 2 && startTouches.length >= 2) {
+      hasMovedRef.current = true;
+      const sd = Math.hypot(startTouches[1].x - startTouches[0].x, startTouches[1].y - startTouches[0].y);
+      const cd = Math.hypot(cur[1].x - cur[0].x, cur[1].y - cur[0].y);
+      if (sd === 0) return;
+      const scale = cd / sd;
+      const newW = Math.max(MIN_VB_W, Math.min(810, startVb.w / scale));
+      const newH = newW * (930 / 810);
+      // ピンチ中心をSVG座標で固定
+      const px = (cur[0].x + cur[1].x) / 2;
+      const py = (cur[0].y + cur[1].y) / 2;
+      const pinchSvg = toSvg(px, py, display, startVb);
+      const relX = (px - display.left) / display.w;
+      const relY = (py - display.top) / display.h;
+      setVb(clampVb(pinchSvg.x - relX * newW, pinchSvg.y - relY * newH, newW, newH));
+    }
+  };
+
+  const handleTouchEnd = () => { gestureRef.current = null; };
+
+  const zoomBy = (factor: number) => {
+    setVb((prev) => {
+      const newW = Math.max(MIN_VB_W, Math.min(810, prev.w / factor));
+      if (newW >= 810 * 0.99) return VB_FULL;
+      const newH = newW * (930 / 810);
+      const cx = prev.x + prev.w / 2;
+      const cy = prev.y + prev.h / 2;
+      return clampVb(cx - newW / 2, cy - newH / 2, newW, newH);
+    });
+  };
+
+  const resetZoom = () => setVb(VB_FULL);
+  const isZoomed = vb.w < 810 * 0.95;
+
   return (
-    <svg
-      viewBox="0 0 810 930"
-      style={{ width: '100%', height: '100%', display: 'block', cursor: selectingTarget ? 'crosshair' : 'default' }}
-      preserveAspectRatio="xMidYMid meet"
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', touchAction: 'none' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      <rect x="0" y="0" width="810" height="930" fill="#0a1628" />
-      {PROVINCES.map((p) => {
-        const isOwned = ownedProvinces.includes(p.id);
-        const isAttackable = attackable.includes(p.id);
-        const isClickable = selectingTarget && isAttackable;
-        return (
-          <g
-            key={p.id}
-            onClick={isClickable ? () => onProvinceClick?.(p.id) : undefined}
-            style={{ cursor: isClickable ? 'pointer' : 'default' }}
-          >
-            <polygon
-              points={p.points}
-              fill={
-                isOwned
-                  ? daimyoColor
-                  : isAttackable && selectingTarget
-                  ? '#cc3030'
-                  : isAttackable
-                  ? '#8b2020'
-                  : '#1e2e1e'
-              }
-              fillOpacity={isOwned ? 0.85 : isAttackable && selectingTarget ? 0.75 : isAttackable ? 0.55 : 0.5}
-              stroke={
-                isOwned
-                  ? '#ffffff55'
-                  : isAttackable && selectingTarget
-                  ? '#ff4444cc'
-                  : isAttackable
-                  ? '#ff666688'
-                  : '#2a4a2a'
-              }
-              strokeWidth={isOwned ? 1.2 : isAttackable && selectingTarget ? 2 : 0.7}
-            />
-            <text
-              x={p.labelX}
-              y={p.labelY}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="8"
-              fill={isOwned ? '#fff' : isAttackable && selectingTarget ? '#ffaaaa' : '#667766'}
-              pointerEvents="none"
-              style={{ userSelect: 'none' }}
+      <svg
+        viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <rect x="0" y="0" width="810" height="930" fill="#0a1628" />
+        {PROVINCES.map((p) => {
+          const isOwned = ownedProvinces.includes(p.id);
+          const isAttackable = attackable.includes(p.id);
+          const isClickable = selectingTarget && isAttackable;
+          return (
+            <g
+              key={p.id}
+              onClick={isClickable ? () => { if (!hasMovedRef.current) onProvinceClick?.(p.id); } : undefined}
+              style={{ cursor: isClickable ? 'pointer' : 'default' }}
             >
-              {p.name}
+              <polygon
+                points={p.points}
+                fill={
+                  isOwned ? daimyoColor
+                  : isAttackable && selectingTarget ? '#cc3030'
+                  : isAttackable ? '#8b2020'
+                  : '#1e2e1e'
+                }
+                fillOpacity={isOwned ? 0.85 : isAttackable && selectingTarget ? 0.75 : isAttackable ? 0.55 : 0.5}
+                stroke={
+                  isOwned ? '#ffffff55'
+                  : isAttackable && selectingTarget ? '#ff4444cc'
+                  : isAttackable ? '#ff666688'
+                  : '#2a4a2a'
+                }
+                strokeWidth={isOwned ? 1.2 : isAttackable && selectingTarget ? 2 : 0.7}
+              />
+              <text
+                x={p.labelX}
+                y={p.labelY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="9"
+                fontWeight={isOwned ? 'bold' : 'normal'}
+                fill={isOwned ? '#fff' : isAttackable && selectingTarget ? '#ffbbbb' : '#778877'}
+                pointerEvents="none"
+                style={{ userSelect: 'none' }}
+              >
+                {p.name}
+              </text>
+            </g>
+          );
+        })}
+        <text x="18" y="22" fontSize="10" fill="rgba(255,255,255,0.2)">北</text>
+        <text x="18" y="912" fontSize="10" fill="rgba(255,255,255,0.2)">南</text>
+        {selectingTarget && (
+          <>
+            <rect x="150" y="8" width="510" height="28" rx="6" fill="rgba(180,30,30,0.85)" />
+            <text x="405" y="26" textAnchor="middle" dominantBaseline="middle" fontSize="13" fill="#fff" fontWeight="bold">
+              ▼ 攻め込む国をタップしてください
             </text>
-          </g>
-        );
-      })}
-      <text x="18" y="22" fontSize="10" fill="rgba(255,255,255,0.25)">北</text>
-      <text x="18" y="912" fontSize="10" fill="rgba(255,255,255,0.25)">南</text>
+          </>
+        )}
+      </svg>
+
+      {/* ズームコントロール */}
+      <Box sx={{ position: 'absolute', bottom: 12, right: 10, display: 'flex', flexDirection: 'column', gap: 0.6, zIndex: 10 }}>
+        <Fab size="small" onClick={() => zoomBy(1.6)} disabled={vb.w <= MIN_VB_W * 1.01} sx={FAB_STYLE}>
+          <ZoomInIcon sx={{ fontSize: '1.15rem' }} />
+        </Fab>
+        <Fab size="small" onClick={() => zoomBy(1 / 1.6)} disabled={!isZoomed} sx={FAB_STYLE}>
+          <ZoomOutIcon sx={{ fontSize: '1.15rem' }} />
+        </Fab>
+        {isZoomed && (
+          <Fab size="small" onClick={resetZoom} sx={FAB_STYLE}>
+            <CropFreeIcon sx={{ fontSize: '1rem' }} />
+          </Fab>
+        )}
+      </Box>
+
+      {/* キャンセルボタン（出陣選択中） */}
       {selectingTarget && (
-        <>
-          <rect x="200" y="8" width="410" height="28" rx="6" fill="rgba(180,30,30,0.85)" />
-          <text x="405" y="26" textAnchor="middle" dominantBaseline="middle" fontSize="13" fill="#fff" fontWeight="bold">
-            ▼ 攻め込む国をクリックしてください
-          </text>
-        </>
+        <Button
+          onClick={onCancelDispatch}
+          sx={{
+            position: 'absolute',
+            bottom: 14,
+            left: 14,
+            color: '#ddd',
+            background: 'rgba(0,0,0,0.85)',
+            border: '1px solid #555',
+            fontSize: '0.85rem',
+            px: 2.5,
+            py: 1,
+            zIndex: 10,
+          }}
+        >
+          キャンセル
+        </Button>
       )}
-    </svg>
+    </div>
   );
 }
 
@@ -413,14 +562,14 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
   const startDispatch = () => {
     if (!canDispatch) return;
     setSelectingTarget(true);
-    setTab(0); // マップが見えるよう内政タブに切替
+    setTab(0);
   };
 
   const cancelDispatch = () => {
     setSelectingTarget(false);
   };
 
-  // ── マップ上で国をクリック → 戦闘ダイアログ ──
+  // ── マップ上で国をタップ → 戦闘ダイアログ ──
   const handleProvinceClick = (provinceId: string) => {
     if (!selectingTarget) return;
     const selectedList = retainers.filter((r) => selectedRetainers.has(r.id));
@@ -437,7 +586,6 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     const target = getProvince(battle.targetProvinceId)!;
     const result = resolveBattle(battle.retainers, totalSoldiers, target);
 
-    // 損害を各武将に均等配分
     const newAssignments = { ...assignments };
     const casualtyPerRetainer = Math.ceil(result.casualties / battle.retainers.length);
     for (const r of battle.retainers) {
@@ -466,261 +614,352 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
 
   // ─── レンダリング ──────────────────────────────────────
   return (
-    <Box sx={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#070d1a', overflow: 'hidden' }}>
+    <Box sx={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#070d1a' }}>
 
       {/* ヘッダー */}
-      <Box sx={{ px: 2, py: 0.8, display: 'flex', alignItems: 'center', gap: 1.5, background: 'rgba(0,0,0,0.5)', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: daimyo.color, boxShadow: `0 0 6px ${daimyo.color}` }} />
-          <Typography sx={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: '1rem', letterSpacing: '0.08em' }}>
+      <Box sx={{
+        px: 1.5,
+        py: 0.5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1,
+        background: 'rgba(0,0,0,0.65)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        flexShrink: 0,
+        minHeight: 50,
+      }}>
+        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: daimyo.color, boxShadow: `0 0 6px ${daimyo.color}`, flexShrink: 0 }} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography sx={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: '0.9rem', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {daimyo.name}
           </Typography>
-          <Typography sx={{ color: '#556677', fontSize: '0.8rem', ml: 0.5 }}>
+          <Typography sx={{ color: '#556677', fontSize: '0.65rem', lineHeight: 1.2 }}>
             {state.year}年{state.month}月
           </Typography>
         </Box>
 
-        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 0.5 }} />
+        {/* 残りアクション数 */}
+        <Box sx={{ display: 'flex', gap: 0.4, alignItems: 'center', flexShrink: 0 }}>
+          {Array.from({ length: MAX_ACTIONS }).map((_, i) => (
+            <Box
+              key={i}
+              sx={{
+                width: 9,
+                height: 9,
+                borderRadius: 1,
+                bgcolor: i < actionsUsed ? 'rgba(60,60,80,0.6)' : '#4a8abc',
+                border: `1px solid ${i < actionsUsed ? '#334' : '#6aacdc'}`,
+              }}
+            />
+          ))}
+        </Box>
 
-        <ResourceChip label="兵士" value={state.soldiers.toLocaleString()} color="#e87050" />
-        <ResourceChip label="兵糧" value={state.food.toLocaleString()} color="#70c870" />
-        <ResourceChip label="金" value={state.gold.toLocaleString()} color="#e8c050" />
-        <ResourceChip label="治安" value={`${state.security}%`} color="#5090e8" />
-        <ResourceChip label="人口" value={state.population.toLocaleString()} color="#a070d0" />
+        {saving && <SaveIcon sx={{ fontSize: '0.95rem', color: '#55aa77', flexShrink: 0 }} />}
 
-        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 0.5 }} />
-        <Box sx={{ color: '#556677', fontSize: '0.75rem' }}>領地 {state.ownedProvinces.length}国</Box>
+        <IconButton size="small" onClick={onReturnToTitle} sx={{ color: '#556677', p: 0.5, flexShrink: 0 }}>
+          <HomeIcon sx={{ fontSize: '1.15rem' }} />
+        </IconButton>
 
-        <Box sx={{ flex: 1 }} />
-
-        {saving && <SaveIcon sx={{ fontSize: '0.9rem', color: '#55aa77', animation: 'pulse 1s infinite' }} />}
-
-        <Button size="small" onClick={onReturnToTitle} startIcon={<HomeIcon />}
-          sx={{ color: '#556677', fontSize: '0.75rem' }}>
-          タイトル
-        </Button>
-        <Button size="small" variant="contained" onClick={endTurn}
-          sx={{ background: 'linear-gradient(135deg, #2a5a3a, #3a8a4a)', fontWeight: 'bold', fontSize: '0.8rem', px: 2 }}>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={endTurn}
+          sx={{
+            background: 'linear-gradient(135deg, #2a5a3a, #3a8a4a)',
+            fontWeight: 'bold',
+            fontSize: '0.75rem',
+            px: 1.2,
+            py: 0.7,
+            minWidth: 0,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}
+        >
           ターン終了
         </Button>
       </Box>
 
+      {/* リソースバー */}
+      <Box sx={{
+        display: 'flex',
+        overflowX: 'auto',
+        flexShrink: 0,
+        background: 'rgba(0,0,0,0.45)',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        '&::-webkit-scrollbar': { display: 'none' },
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      }}>
+        {[
+          { label: '兵士', value: state.soldiers.toLocaleString(), color: '#e87050' },
+          { label: '兵糧', value: state.food.toLocaleString(), color: '#70c870' },
+          { label: '金', value: state.gold.toLocaleString(), color: '#e8c050' },
+          { label: '治安', value: `${state.security}%`, color: '#5090e8' },
+          { label: '人口', value: state.population.toLocaleString(), color: '#a070d0' },
+          { label: '領地', value: `${state.ownedProvinces.length}国`, color: '#88cccc' },
+        ].map(({ label, value, color }) => (
+          <Box
+            key={label}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              px: 1.5,
+              py: 0.5,
+              minWidth: 58,
+              flexShrink: 0,
+              borderRight: '1px solid rgba(255,255,255,0.04)',
+            }}
+          >
+            <Typography sx={{ fontSize: '0.55rem', color: '#556677', letterSpacing: '0.03em' }}>{label}</Typography>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 'bold', color, lineHeight: 1.3 }}>{value}</Typography>
+          </Box>
+        ))}
+      </Box>
+
       {/* メインコンテンツ */}
-      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
-        {/* 左: マップ + ログ */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1, gap: 1 }}>
-          <Box sx={{ flex: 1, overflow: 'hidden', borderRadius: 1, border: `1px solid ${selectingTarget ? 'rgba(200,50,50,0.4)' : 'rgba(255,255,255,0.06)'}`, position: 'relative', transition: 'border-color 0.2s' }}>
-            <GameMap
-              ownedProvinces={state.ownedProvinces}
-              daimyoColor={daimyo.color}
-              attackable={attackable.map((p) => p.id)}
-              selectingTarget={selectingTarget}
-              onProvinceClick={handleProvinceClick}
-            />
-            {selectingTarget && (
-              <Button
-                size="small"
-                onClick={cancelDispatch}
-                sx={{ position: 'absolute', bottom: 8, right: 8, color: '#aaa', background: 'rgba(0,0,0,0.6)', fontSize: '0.7rem', border: '1px solid #444' }}
-              >
-                キャンセル
-              </Button>
-            )}
+        {/* 地図タブ */}
+        {tab === 0 && (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+              position: 'relative',
+              border: selectingTarget ? '2px solid rgba(200,50,50,0.5)' : '1px solid rgba(255,255,255,0.04)',
+              transition: 'border-color 0.2s',
+            }}>
+              <GameMap
+                ownedProvinces={state.ownedProvinces}
+                daimyoColor={daimyo.color}
+                attackable={attackable.map((p) => p.id)}
+                selectingTarget={selectingTarget}
+                onProvinceClick={handleProvinceClick}
+                onCancelDispatch={cancelDispatch}
+              />
+            </Box>
+
+            {/* ログ */}
+            <Box sx={{
+              height: 74,
+              overflowY: 'auto',
+              background: 'rgba(0,0,0,0.55)',
+              px: 1.5,
+              py: 0.5,
+              flexShrink: 0,
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              '&::-webkit-scrollbar': { display: 'none' },
+              scrollbarWidth: 'none',
+            }}>
+              {log.map((entry, i) => (
+                <Typography key={i} variant="caption" sx={{ display: 'block', color: i === 0 ? '#cce0f5' : '#445566', fontSize: '0.7rem', lineHeight: 1.7 }}>
+                  {entry}
+                </Typography>
+              ))}
+            </Box>
           </Box>
-          <Box sx={{ height: 90, overflowY: 'auto', background: 'rgba(0,0,0,0.4)', borderRadius: 1, border: '1px solid rgba(255,255,255,0.06)', px: 1.5, py: 0.5 }}>
-            {log.map((entry, i) => (
-              <Typography key={i} variant="caption" sx={{ display: 'block', color: i === 0 ? '#cce0f5' : '#445566', fontSize: '0.72rem', lineHeight: 1.6 }}>
-                {entry}
+        )}
+
+        {/* 内政タブ */}
+        {tab === 1 && (
+          <Box sx={{ height: '100%', overflowY: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="caption" sx={{ color: '#667788', letterSpacing: '0.1em' }}>内政コマンド</Typography>
+              <Typography variant="caption" sx={{ color: actionsUsed >= MAX_ACTIONS ? '#ff6644' : '#4a8abc', fontWeight: 'bold' }}>
+                {actionsUsed >= MAX_ACTIONS ? '今ターン行動終了' : `あと ${MAX_ACTIONS - actionsUsed} 回`}
               </Typography>
-            ))}
+            </Box>
+
+            {INTERNAL_ACTIONS.map((action) => {
+              const canDo = actionsUsed < MAX_ACTIONS && action.canExecute(state);
+              return (
+                <Card
+                  key={action.id}
+                  sx={{
+                    background: canDo ? `${action.color}18` : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${canDo ? action.color + '44' : 'rgba(255,255,255,0.05)'}`,
+                  }}
+                >
+                  <CardContent sx={{ p: '14px 16px !important' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <Typography sx={{ fontSize: '1.3rem' }}>{action.icon}</Typography>
+                      <Typography sx={{ fontWeight: 'bold', color: canDo ? '#ddeeff' : '#445566', fontSize: '1rem' }}>{action.name}</Typography>
+                      <Box sx={{ flex: 1 }} />
+                      <Chip label={action.costLabel} size="small" sx={{ fontSize: '0.65rem', height: 20, bgcolor: 'rgba(255,100,100,0.12)', color: '#ff9999' }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '0.78rem', color: '#8899aa', mb: 1, lineHeight: 1.6 }}>{action.description}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography sx={{ fontSize: '0.74rem', color: '#55aa77', flex: 1 }}>効果: {action.effectLabel}</Typography>
+                      <Button
+                        variant="contained"
+                        disabled={!canDo}
+                        onClick={() => executeAction(action)}
+                        sx={{
+                          fontSize: '0.82rem',
+                          px: 2.5,
+                          py: 0.8,
+                          minWidth: 0,
+                          background: canDo ? action.color : undefined,
+                          '&:hover': { background: canDo ? action.color + 'cc' : undefined },
+                          '&.Mui-disabled': { opacity: 0.3 },
+                        }}
+                      >
+                        実行
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </Box>
-        </Box>
+        )}
 
-        {/* 右: タブパネル */}
-        <Box sx={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', borderLeft: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: '1px solid rgba(255,255,255,0.08)', minHeight: 40, '& .MuiTab-root': { minHeight: 40, fontSize: '0.8rem', color: '#667788' }, '& .Mui-selected': { color: '#e8d5a3 !important' }, '& .MuiTabs-indicator': { bgcolor: '#e8d5a3' } }}>
-            <Tab label="内政" />
-            <Tab label="家臣・出陣" />
-          </Tabs>
-
-          {/* 内政タブ */}
-          {tab === 0 && (
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {/* 残り行動数バナー */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 0.5, mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: '#667788' }}>内政コマンド</Typography>
-                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                  {Array.from({ length: MAX_ACTIONS }).map((_, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        width: 14, height: 14, borderRadius: '3px',
-                        bgcolor: i < actionsUsed ? 'rgba(80,80,100,0.4)' : '#4a8abc',
-                        border: `1px solid ${i < actionsUsed ? '#334' : '#6aacdc'}`,
-                        transition: 'background-color 0.2s',
-                      }}
-                    />
-                  ))}
-                  <Typography variant="caption" sx={{ color: actionsUsed >= MAX_ACTIONS ? '#ff6644' : '#4a8abc', ml: 0.5, fontWeight: 'bold' }}>
-                    {actionsUsed >= MAX_ACTIONS ? '行動終了' : `残り ${MAX_ACTIONS - actionsUsed} 回`}
-                  </Typography>
-                </Box>
+        {/* 家臣タブ */}
+        {tab === 2 && (
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="caption" sx={{ color: '#667788' }}>武将を選択して出陣</Typography>
+                <Typography variant="caption" sx={{ color: availableSoldiers < 0 ? '#ff4444' : '#55aa77' }}>
+                  待機: {availableSoldiers.toLocaleString()} / {state.soldiers.toLocaleString()}
+                </Typography>
               </Box>
 
-              {INTERNAL_ACTIONS.map((action) => {
-                const canDo = actionsUsed < MAX_ACTIONS && action.canExecute(state);
+              {retainers.map((r) => {
+                const assigned = assignments[r.id] ?? 0;
+                const isSelected = selectedRetainers.has(r.id);
                 return (
-                  <Card key={action.id} sx={{ background: canDo ? `${action.color}18` : 'rgba(255,255,255,0.03)', border: `1px solid ${canDo ? action.color + '44' : 'rgba(255,255,255,0.06)'}` }}>
-                    <CardContent sx={{ p: '10px 12px !important' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <Typography sx={{ fontSize: '1.1rem' }}>{action.icon}</Typography>
-                        <Typography sx={{ fontWeight: 'bold', color: canDo ? '#ddeeff' : '#445566', fontSize: '0.9rem' }}>{action.name}</Typography>
-                        <Box sx={{ flex: 1 }} />
-                        <Chip label={action.costLabel} size="small" sx={{ fontSize: '0.62rem', height: 18, bgcolor: 'rgba(255,100,100,0.15)', color: '#ff8888' }} />
+                  <Card
+                    key={r.id}
+                    sx={{
+                      mb: 1.5,
+                      background: isSelected ? 'rgba(180,50,20,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isSelected ? 'rgba(200,80,40,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                  >
+                    <CardContent sx={{ p: '12px 14px !important' }}>
+                      {/* 武将情報 */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={assigned === 0}
+                          onChange={() => toggleRetainer(r.id)}
+                          sx={{ p: 0.5, color: '#556677', '&.Mui-checked': { color: '#ff8866' } }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ color: '#cce0f5', fontSize: '0.95rem', fontWeight: 'bold' }}>{r.name}</Typography>
+                          <Typography sx={{ color: '#667788', fontSize: '0.68rem' }}>{r.nameReading}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          <Chip label={`統${r.stats.command}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#c04020aa', color: '#ffaa88' }} />
+                          <Chip label={`知${r.stats.intelligence}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#1040b0aa', color: '#88aaff' }} />
+                          <Chip label={`忠${r.stats.loyalty}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#107040aa', color: '#88dd88' }} />
+                        </Box>
                       </Box>
-                      <Typography sx={{ fontSize: '0.72rem', color: '#8899aa', mb: 0.8, lineHeight: 1.5 }}>{action.description}</Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ fontSize: '0.7rem', color: '#55aa77', flex: 1 }}>効果: {action.effectLabel}</Typography>
-                        <Button size="small" variant="contained" disabled={!canDo} onClick={() => executeAction(action)}
-                          sx={{ fontSize: '0.72rem', px: 1.5, py: 0.4, minWidth: 0, background: canDo ? action.color : undefined, '&:hover': { background: canDo ? action.color + 'cc' : undefined }, '&.Mui-disabled': { opacity: 0.3 } }}>
-                          実行
+
+                      {/* 兵士割当 */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography sx={{ fontSize: '0.7rem', color: '#556677', flexShrink: 0, mr: 0.5 }}>割当:</Typography>
+                        <IconButton onClick={() => changeAssignment(r.id, -100)} sx={{ p: 0.75, color: '#cc6644' }}>
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                        <Button
+                          onClick={() => changeAssignment(r.id, -50)}
+                          sx={{ minWidth: 44, minHeight: 40, color: '#aa5533', fontSize: '0.72rem', p: 0 }}
+                        >
+                          -50
                         </Button>
+                        <Box sx={{ flex: 1, textAlign: 'center' }}>
+                          <Typography sx={{ color: assigned > 0 ? '#e8c050' : '#445566', fontWeight: 'bold', fontSize: '1rem' }}>
+                            {assigned.toLocaleString()}
+                          </Typography>
+                        </Box>
+                        <Button
+                          onClick={() => changeAssignment(r.id, 50)}
+                          disabled={availableSoldiers <= 0}
+                          sx={{ minWidth: 44, minHeight: 40, color: '#44aa66', fontSize: '0.72rem', p: 0 }}
+                        >
+                          +50
+                        </Button>
+                        <IconButton onClick={() => changeAssignment(r.id, 100)} disabled={availableSoldiers <= 0} sx={{ p: 0.75, color: '#55bb77' }}>
+                          <AddIcon fontSize="small" />
+                        </IconButton>
                       </Box>
+
+                      {assigned > 0 ? (
+                        <LinearProgress
+                          variant="determinate"
+                          value={Math.min(100, (assigned / Math.max(state.soldiers, 1)) * 100)}
+                          sx={{ height: 4, borderRadius: 2, mt: 0.75, bgcolor: '#1a2a1a', '& .MuiLinearProgress-bar': { bgcolor: isSelected ? '#ff8844' : '#e8c050' } }}
+                        />
+                      ) : (
+                        <Typography sx={{ fontSize: '0.66rem', color: '#445566', mt: 0.3 }}>
+                          ※ 兵士を割り当てると選択できます
+                        </Typography>
+                      )}
                     </CardContent>
                   </Card>
                 );
               })}
             </Box>
-          )}
 
-          {/* 家臣・出陣タブ */}
-          {tab === 1 && (
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
-                  <Typography variant="caption" sx={{ color: '#667788' }}>武将を選択して出陣</Typography>
-                  <Typography variant="caption" sx={{ color: availableSoldiers < 0 ? '#ff4444' : '#55aa77' }}>
-                    待機: {availableSoldiers.toLocaleString()} / {state.soldiers.toLocaleString()}
-                  </Typography>
-                </Box>
-
-                {retainers.map((r) => {
-                  const assigned = assignments[r.id] ?? 0;
-                  const isSelected = selectedRetainers.has(r.id);
-                  return (
-                    <Card
-                      key={r.id}
-                      sx={{
-                        mb: 1,
-                        background: isSelected ? 'rgba(180,50,20,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${isSelected ? 'rgba(200,80,40,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                        transition: 'border-color 0.15s, background 0.15s',
-                      }}
-                    >
-                      <CardContent sx={{ p: '10px 12px !important' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.8 }}>
-                          <Checkbox
-                            size="small"
-                            checked={isSelected}
-                            disabled={assigned === 0}
-                            onChange={() => toggleRetainer(r.id)}
-                            sx={{ p: 0.3, color: '#556677', '&.Mui-checked': { color: '#ff8866' } }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography sx={{ color: '#cce0f5', fontSize: '0.88rem', fontWeight: 'bold' }}>{r.name}</Typography>
-                            <Typography sx={{ color: '#667788', fontSize: '0.65rem' }}>{r.nameReading}</Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            <Chip label={`統${r.stats.command}`} size="small" sx={{ fontSize: '0.6rem', height: 16, bgcolor: '#c04020aa', color: '#ffaa88' }} />
-                            <Chip label={`知${r.stats.intelligence}`} size="small" sx={{ fontSize: '0.6rem', height: 16, bgcolor: '#1040b0aa', color: '#88aaff' }} />
-                            <Chip label={`忠${r.stats.loyalty}`} size="small" sx={{ fontSize: '0.6rem', height: 16, bgcolor: '#107040aa', color: '#88dd88' }} />
-                          </Box>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.8 }}>
-                          <Typography sx={{ fontSize: '0.7rem', color: '#556677', mr: 0.5 }}>割当兵士:</Typography>
-                          <IconButton size="small" onClick={() => changeAssignment(r.id, -100)} sx={{ p: 0.3, color: '#cc6644' }}>
-                            <RemoveIcon sx={{ fontSize: '0.85rem' }} />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => changeAssignment(r.id, -50)} sx={{ p: 0.3, color: '#aa5533' }}>
-                            <Typography sx={{ fontSize: '0.65rem', lineHeight: 1 }}>-50</Typography>
-                          </IconButton>
-                          <Box sx={{ flex: 1, textAlign: 'center' }}>
-                            <Typography sx={{ color: assigned > 0 ? '#e8c050' : '#445566', fontWeight: 'bold', fontSize: '0.95rem' }}>
-                              {assigned.toLocaleString()}
-                            </Typography>
-                          </Box>
-                          <IconButton size="small" onClick={() => changeAssignment(r.id, 50)} sx={{ p: 0.3, color: '#44aa66' }} disabled={availableSoldiers <= 0}>
-                            <Typography sx={{ fontSize: '0.65rem', lineHeight: 1 }}>+50</Typography>
-                          </IconButton>
-                          <IconButton size="small" onClick={() => changeAssignment(r.id, 100)} sx={{ p: 0.3, color: '#55bb77' }} disabled={availableSoldiers <= 0}>
-                            <AddIcon sx={{ fontSize: '0.85rem' }} />
-                          </IconButton>
-                        </Box>
-
-                        {assigned > 0 && (
-                          <LinearProgress
-                            variant="determinate"
-                            value={Math.min(100, (assigned / state.soldiers) * 100)}
-                            sx={{ height: 3, borderRadius: 2, bgcolor: '#1a2a1a', '& .MuiLinearProgress-bar': { bgcolor: isSelected ? '#ff8844' : '#e8c050' } }}
-                          />
-                        )}
-                        {assigned === 0 && (
-                          <Typography sx={{ fontSize: '0.65rem', color: '#445566', mt: 0.3 }}>
-                            ※ 兵士を割り当てると選択できます
-                          </Typography>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Box>
-
-              {/* 出陣ボタン（下部固定） */}
-              <Box sx={{ p: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                {selectedRetainers.size > 0 && (
-                  <Typography variant="caption" sx={{ display: 'block', color: '#ff9966', mb: 0.8, textAlign: 'center' }}>
-                    {Array.from(selectedRetainers).map((id) => retainers.find((r) => r.id === id)?.name).join('・')}
-                    　計 {selectedTotalSoldiers.toLocaleString()} 兵
-                  </Typography>
-                )}
-                <Tooltip
-                  title={
-                    !canDispatch
-                      ? selectedRetainers.size === 0
-                        ? '武将にチェックを入れてください'
-                        : selectedTotalSoldiers === 0
-                        ? '兵士を割り当てた武将を選択してください'
-                        : '攻略可能な隣接領地がありません'
-                      : ''
-                  }
-                >
-                  <span style={{ display: 'block' }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      disabled={!canDispatch}
-                      startIcon={<GavelIcon />}
-                      onClick={startDispatch}
-                      sx={{
-                        background: canDispatch ? 'linear-gradient(135deg, #8b1a0a, #c03020)' : undefined,
-                        fontWeight: 'bold',
-                        fontSize: '0.88rem',
-                        py: 0.8,
-                        '&:hover': { background: 'linear-gradient(135deg, #aa2010, #e04030)' },
-                        '&.Mui-disabled': { opacity: 0.35 },
-                      }}
-                    >
-                      出陣
-                    </Button>
-                  </span>
-                </Tooltip>
-              </Box>
+            {/* 出陣ボタン（下部固定） */}
+            <Box sx={{ p: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, background: 'rgba(0,0,0,0.4)' }}>
+              {selectedRetainers.size > 0 && (
+                <Typography variant="caption" sx={{ display: 'block', color: '#ff9966', mb: 1, textAlign: 'center', fontSize: '0.78rem' }}>
+                  {Array.from(selectedRetainers).map((id) => retainers.find((r) => r.id === id)?.name).join('・')}
+                  　計 {selectedTotalSoldiers.toLocaleString()} 兵
+                </Typography>
+              )}
+              <Button
+                fullWidth
+                variant="contained"
+                disabled={!canDispatch}
+                startIcon={<GavelIcon />}
+                onClick={startDispatch}
+                sx={{
+                  background: canDispatch ? 'linear-gradient(135deg, #8b1a0a, #c03020)' : undefined,
+                  fontWeight: 'bold',
+                  fontSize: '0.95rem',
+                  py: 1.2,
+                  '&.Mui-disabled': { opacity: 0.35 },
+                }}
+              >
+                出陣
+              </Button>
+              {!canDispatch && (
+                <Typography variant="caption" sx={{ display: 'block', color: '#556677', textAlign: 'center', mt: 0.5, fontSize: '0.7rem' }}>
+                  {selectedRetainers.size === 0
+                    ? '武将にチェックを入れてください'
+                    : selectedTotalSoldiers === 0
+                    ? '兵士を割り当てた武将を選択してください'
+                    : '攻略可能な隣接領地がありません'}
+                </Typography>
+              )}
             </Box>
-          )}
-        </Box>
+          </Box>
+        )}
       </Box>
+
+      {/* ボトムナビゲーション */}
+      <BottomNavigation
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        sx={{
+          flexShrink: 0,
+          background: 'rgba(5,10,20,0.95)',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          '& .MuiBottomNavigationAction-root': { color: '#445566', minWidth: 0, py: 0.5 },
+          '& .Mui-selected': { color: '#e8d5a3 !important' },
+          '& .MuiBottomNavigationAction-label': { fontSize: '0.68rem !important' },
+        }}
+      >
+        <BottomNavigationAction label="地図" icon={<MapIcon sx={{ fontSize: '1.3rem' }} />} />
+        <BottomNavigationAction label="内政" icon={<BuildIcon sx={{ fontSize: '1.3rem' }} />} />
+        <BottomNavigationAction label="家臣" icon={<GroupIcon sx={{ fontSize: '1.3rem' }} />} />
+      </BottomNavigation>
 
       {/* 戦闘ダイアログ */}
       <Dialog
@@ -728,9 +967,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
         onClose={closeBattle}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { background: '#0d1a2e', border: '1px solid #334455' } } }}
+        slotProps={{ paper: { sx: { background: '#0d1a2e', border: '1px solid #334455', mx: 2 } } }}
       >
-        <DialogTitle sx={{ color: '#e8d5a3', pb: 1 }}>
+        <DialogTitle sx={{ color: '#e8d5a3', pb: 1, fontSize: '1rem' }}>
           {battle.result
             ? '戦闘結果'
             : `出陣 ─ ${battle.retainers.map((r) => r.name).join('・')}`}
@@ -740,7 +979,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ color: '#667788' }}>出陣兵士数（合計）</Typography>
-                <Typography sx={{ color: '#e8c050', fontSize: '1.3rem', fontWeight: 'bold' }}>
+                <Typography sx={{ color: '#e8c050', fontSize: '1.4rem', fontWeight: 'bold' }}>
                   {battle.retainers.reduce((sum, r) => sum + (assignments[r.id] ?? 0), 0).toLocaleString()} 兵
                 </Typography>
               </Box>
@@ -757,9 +996,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
               </Box>
             </Box>
           ) : (
-            <Box sx={{ textAlign: 'center', py: 1 }}>
-              <Typography sx={{ fontSize: '2rem', mb: 1 }}>{battle.result.won ? '🏆' : '💀'}</Typography>
-              <Typography sx={{ color: battle.result.won ? '#55ee88' : '#ee5555', fontWeight: 'bold', fontSize: '1.05rem', mb: 1 }}>
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>{battle.result.won ? '🏆' : '💀'}</Typography>
+              <Typography sx={{ color: battle.result.won ? '#55ee88' : '#ee5555', fontWeight: 'bold', fontSize: '1.1rem', mb: 1 }}>
                 {battle.result.message}
               </Typography>
               {battle.result.won && battle.result.gained && (
@@ -768,20 +1007,20 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
           {!battle.result ? (
             <>
-              <Button onClick={closeBattle} sx={{ color: '#667788' }}>キャンセル</Button>
+              <Button onClick={closeBattle} sx={{ color: '#667788', flex: 1 }}>キャンセル</Button>
               <Button
                 variant="contained"
                 onClick={executeBattle}
-                sx={{ background: '#c04020', '&:hover': { background: '#e06030' } }}
+                sx={{ background: '#c04020', '&:hover': { background: '#e06030' }, flex: 1 }}
               >
                 開戦
               </Button>
             </>
           ) : (
-            <Button onClick={closeBattle} variant="contained" sx={{ background: '#2a4a6a' }}>閉じる</Button>
+            <Button onClick={closeBattle} variant="contained" fullWidth sx={{ background: '#2a4a6a' }}>閉じる</Button>
           )}
         </DialogActions>
       </Dialog>

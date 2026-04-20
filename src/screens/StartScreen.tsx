@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -47,38 +46,38 @@ export default function StartScreen({ onNewGame, onContinue }: Props) {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0d0d1a 0%, #1a1a3e 60%, #0d1a2e 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, p: 3 }}>
-      <Typography variant="h2" sx={{ color: '#e8d5a3', fontWeight: 'bold', letterSpacing: '0.15em', textShadow: '0 0 30px rgba(232,213,163,0.5)', mb: 1 }}>
+    <Box sx={{ minHeight: '100dvh', background: 'linear-gradient(135deg, #0d0d1a 0%, #1a1a3e 60%, #0d1a2e 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, p: 2.5 }}>
+      <Typography sx={{ color: '#e8d5a3', fontWeight: 'bold', letterSpacing: '0.15em', textShadow: '0 0 30px rgba(232,213,163,0.5)', fontSize: 'clamp(1.8rem, 8vw, 3rem)', lineHeight: 1.2 }}>
         AKIRA YABO
       </Typography>
-      <Typography variant="subtitle1" sx={{ color: '#8899aa', letterSpacing: '0.3em', mb: 2 }}>
+      <Typography variant="subtitle1" sx={{ color: '#8899aa', letterSpacing: '0.3em', mt: -1 }}>
         ─ セーブデータを選択 ─
       </Typography>
 
       {loading ? (
         <CircularProgress sx={{ color: '#e8d5a3' }} />
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', maxWidth: 520 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: '100%', maxWidth: 480 }}>
           {slots.map((save, i) => {
             const slotId = i + 1;
             return (
-              <Card key={slotId} sx={{ background: save ? 'linear-gradient(135deg, #1e2a3a 0%, #2a3a4e 100%)' : 'rgba(255,255,255,0.04)', border: save ? '1px solid #3a5a7a' : '1px dashed #334', borderRadius: 2, transition: 'box-shadow 0.2s', '&:hover': { boxShadow: '0 0 20px rgba(100,160,220,0.2)' } }}>
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, '&:last-child': { pb: 2 } }}>
+              <Card key={slotId} sx={{ background: save ? 'linear-gradient(135deg, #1e2a3a 0%, #2a3a4e 100%)' : 'rgba(255,255,255,0.04)', border: save ? '1px solid #3a5a7a' : '1px dashed #334', borderRadius: 2 }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: '14px 16px', '&:last-child': { pb: '14px' } }}>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="caption" sx={{ color: '#556677' }}>スロット {slotId}</Typography>
                     {save ? (
                       <>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="h6" sx={{ color: '#cce0f5', lineHeight: 1.2 }}>{save.playerName}</Typography>
+                          <Typography sx={{ color: '#cce0f5', fontWeight: 'bold', fontSize: '1rem', lineHeight: 1.2 }}>{save.playerName}</Typography>
                           <Typography variant="caption" sx={{ color: '#557799', fontSize: '0.7rem' }}>
-                            {save.ownedProvinces.length}国支配
+                            {save.ownedProvinces.length}国
                           </Typography>
                         </Box>
-                        <Typography variant="body2" sx={{ color: '#8899aa' }}>
-                          {save.year}年{save.month}月 ／ 兵士:{save.soldiers.toLocaleString()} ／ 金:{save.gold.toLocaleString()}
+                        <Typography variant="body2" sx={{ color: '#8899aa', fontSize: '0.78rem' }}>
+                          {save.year}年{save.month}月 ／ 兵:{save.soldiers.toLocaleString()} ／ 金:{save.gold.toLocaleString()}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#445566' }}>
-                          プレイ時間: {save.playtimeFormatted} ／ {save.updatedAt.toLocaleString('ja-JP')}
+                        <Typography variant="caption" sx={{ color: '#445566', fontSize: '0.65rem' }}>
+                          {save.playtimeFormatted} ／ {save.updatedAt.toLocaleString('ja-JP')}
                         </Typography>
                       </>
                     ) : (
@@ -86,30 +85,24 @@ export default function StartScreen({ onNewGame, onContinue }: Props) {
                     )}
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                     {save ? (
                       <>
-                        <Tooltip title="続きから再開">
-                          <Button variant="contained" size="small" onClick={() => onContinue(save)}
-                            sx={{ minWidth: 0, px: 1.5, background: '#2a5a8a', '&:hover': { background: '#3a7abc' } }}>
-                            <PlayArrowIcon fontSize="small" />
-                          </Button>
-                        </Tooltip>
-                        <Tooltip title="削除">
-                          <Button variant="outlined" size="small" color="error"
-                            onClick={() => setDeleteDialog({ open: true, slotId })}
-                            sx={{ minWidth: 0, px: 1.5, borderColor: '#5a2a2a', color: '#cc6666', '&:hover': { borderColor: '#cc4444' } }}>
-                            <DeleteIcon fontSize="small" />
-                          </Button>
-                        </Tooltip>
+                        <Button variant="contained" onClick={() => onContinue(save)}
+                          sx={{ minWidth: 52, minHeight: 44, px: 1.5, background: '#2a5a8a', '&:hover': { background: '#3a7abc' } }}>
+                          <PlayArrowIcon />
+                        </Button>
+                        <Button variant="outlined" color="error"
+                          onClick={() => setDeleteDialog({ open: true, slotId })}
+                          sx={{ minWidth: 44, minHeight: 44, px: 1, borderColor: '#5a2a2a', color: '#cc6666', '&:hover': { borderColor: '#cc4444' } }}>
+                          <DeleteIcon />
+                        </Button>
                       </>
                     ) : (
-                      <Tooltip title="新しいゲーム（大名選択へ）">
-                        <Button variant="outlined" size="small" onClick={() => onNewGame(slotId)}
-                          sx={{ minWidth: 0, px: 1.5, borderColor: '#3a5a3a', color: '#66aa66', '&:hover': { borderColor: '#44aa44' } }}>
-                          <AddIcon fontSize="small" />
-                        </Button>
-                      </Tooltip>
+                      <Button variant="outlined" onClick={() => onNewGame(slotId)}
+                        sx={{ minWidth: 52, minHeight: 44, px: 1.5, borderColor: '#3a5a3a', color: '#66aa66', '&:hover': { borderColor: '#44aa44' } }}>
+                        <AddIcon />
+                      </Button>
                     )}
                   </Box>
                 </CardContent>
