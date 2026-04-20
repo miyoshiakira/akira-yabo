@@ -1,3 +1,5 @@
+import type { RecruitedRetainerData, MyPrisonerData } from '../data/retainerData';
+
 export interface SaveDataProps {
   id: number;
   slotName: string;
@@ -16,6 +18,8 @@ export interface SaveDataProps {
   population: number;
   ownedProvinces: string[];
   retainerAssignments: Record<string, number>;
+  recruitedRetainers: RecruitedRetainerData[];
+  myPrisoners: MyPrisonerData[];
 }
 
 export class SaveData {
@@ -35,6 +39,8 @@ export class SaveData {
   population: number;
   ownedProvinces: string[];
   retainerAssignments: Record<string, number>;
+  recruitedRetainers: RecruitedRetainerData[];
+  myPrisoners: MyPrisonerData[];
 
   constructor(props: Partial<SaveDataProps> & { id: number }) {
     this.id = props.id;
@@ -53,6 +59,8 @@ export class SaveData {
     this.population = props.population ?? 10000;
     this.ownedProvinces = props.ownedProvinces ?? [];
     this.retainerAssignments = props.retainerAssignments ?? {};
+    this.recruitedRetainers = props.recruitedRetainers ?? [];
+    this.myPrisoners = props.myPrisoners ?? [];
   }
 
   get playtimeFormatted(): string {
@@ -80,6 +88,8 @@ export class SaveData {
       population: this.population,
       ownedProvinces: this.ownedProvinces,
       retainerAssignments: this.retainerAssignments,
+      recruitedRetainers: this.recruitedRetainers,
+      myPrisoners: this.myPrisoners,
     };
   }
 

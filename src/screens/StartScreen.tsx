@@ -15,6 +15,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import AddIcon from '@mui/icons-material/Add';
+import BugReportIcon from '@mui/icons-material/BugReport';
 import type { SaveData } from '../lib/saveData';
 import { deleteSaveSlot, getAllSaveSlots } from '../lib/saveDataDB';
 
@@ -23,9 +24,10 @@ const SLOT_COUNT = 3;
 interface Props {
   onNewGame: (slotId: number) => void;
   onContinue: (save: SaveData) => void;
+  onOpenMapEditor: () => void;
 }
 
-export default function StartScreen({ onNewGame, onContinue }: Props) {
+export default function StartScreen({ onNewGame, onContinue, onOpenMapEditor }: Props) {
   const [slots, setSlots] = useState<(SaveData | null)[]>(Array(SLOT_COUNT).fill(null));
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; slotId: number | null }>({ open: false, slotId: null });
@@ -53,6 +55,15 @@ export default function StartScreen({ onNewGame, onContinue }: Props) {
       <Typography variant="subtitle1" sx={{ color: '#8899aa', letterSpacing: '0.3em', mt: -1 }}>
         ─ セーブデータを選択 ─
       </Typography>
+
+      <Button
+        variant="outlined"
+        onClick={onOpenMapEditor}
+        startIcon={<BugReportIcon />}
+        sx={{ borderColor: '#5a5a5a', color: '#666666', '&:hover': { borderColor: '#777777', color: '#777777' } }}
+      >
+        デバッグ: マップエディタ
+      </Button>
 
       {loading ? (
         <CircularProgress sx={{ color: '#e8d5a3' }} />

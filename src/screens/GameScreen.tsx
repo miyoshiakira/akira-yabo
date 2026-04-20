@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { forwardRef, useMemo, useRef, useState } from 'react';
 import {
   BottomNavigation,
   BottomNavigationAction,
@@ -15,8 +15,11 @@ import {
   Fab,
   IconButton,
   LinearProgress,
+  Slide,
   Typography,
 } from '@mui/material';
+import type { TransitionProps } from '@mui/material/transitions';
+import { keyframes } from '@emotion/react';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -28,10 +31,10 @@ import SaveIcon from '@mui/icons-material/Save';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CropFreeIcon from '@mui/icons-material/CropFree';
-import { getDaimyo, getProvince, PROVINCES } from '../data/gameData';
+import { getDaimyo, getPolygonPoints, getProvince, PROVINCES } from '../data/gameData';
 import type { Province } from '../data/gameData';
 import { getRetainersByDaimyo } from '../data/retainerData';
-import type { Retainer } from '../data/retainerData';
+import type { Retainer, RecruitedRetainerData, MyPrisonerData } from '../data/retainerData';
 import type { SaveData } from '../lib/saveData';
 import { writeSaveSlot } from '../lib/saveDataDB';
 
@@ -45,13 +48,22 @@ interface GameState {
   security: number;
   population: number;
   ownedProvinces: string[];
+  recruitedRetainers: RecruitedRetainerData[];
+  myPrisoners: MyPrisonerData[];
 }
+
+type BattlePhase = 'confirm' | 'result' | 'capture' | 'prisoner';
 
 interface BattleDialog {
   open: boolean;
+  phase: BattlePhase;
   retainers: Retainer[];
   targetProvinceId: string;
   result: BattleResult | null;
+  autoRecruited: Retainer[];
+  pendingCapture: Retainer[];
+  captureDecisions: Record<string, 'release' | 'execute'>;
+  newMyPrisoners: Retainer[];
 }
 
 interface BattleResult {
@@ -184,6 +196,8 @@ function getAttackableProvinces(owned: string[]): Province[] {
   return Array.from(set).map((id) => getProvince(id)!).filter(Boolean);
 }
 
+const PRISONER_TURNS = 10;
+
 function resolveBattle(retainers: Retainer[], soldiers: number, target: Province): BattleResult {
   const maxCommand = Math.max(...retainers.map((r) => r.stats.command));
   const atk = soldiers * (maxCommand / 100) * (0.75 + Math.random() * 0.5);
@@ -200,9 +214,70 @@ function resolveBattle(retainers: Retainer[], soldiers: number, target: Province
   };
 }
 
+// 自軍参戦武将の平均ステータスに基づく捕縛確率（10%〜55%）
+function calcCaptureChance(myRetainers: Retainer[]): number {
+  if (myRetainers.length === 0) return 0;
+  const avg = myRetainers.reduce((s, r) => s + r.stats.command + r.stats.intelligence + r.stats.loyalty, 0) / myRetainers.length;
+  return Math.min(0.55, Math.max(0.10, (avg / 285) * 0.55));
+}
+
+// 武将のステータス総合値に基づく捕虜確率（5%〜40%）
+function calcPrisonerChance(retainer: Retainer): number {
+  const total = retainer.stats.command + retainer.stats.intelligence + retainer.stats.loyalty;
+  return Math.max(0.05, Math.min(0.40, 0.55 - (total / 285) * 0.50));
+}
+
 // ─── ゲームマップ（viewBox操作によるズーム・パン） ────────
 // CSS transform ではなく viewBox を操作することで、
 // ズーム時もSVGがベクター再描画され地名が常にシャープになる。
+
+// ─── アニメーション定義 ─────────────────────────────────
+const bounceIn = keyframes`
+  0%   { transform: scale(0.4) translateY(16px); opacity: 0; }
+  55%  { transform: scale(1.08) translateY(-4px); opacity: 1; }
+  75%  { transform: scale(0.96); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+`;
+
+const shakeX = keyframes`
+  0%,100% { transform: translateX(0) rotate(0deg); }
+  15%      { transform: translateX(-7px) rotate(-3deg); }
+  30%      { transform: translateX(7px)  rotate(3deg); }
+  45%      { transform: translateX(-5px) rotate(-1.5deg); }
+  60%      { transform: translateX(5px)  rotate(1.5deg); }
+  75%      { transform: translateX(-2px); }
+`;
+
+const glowRed = keyframes`
+  0%,100% { box-shadow: 0 0 6px rgba(192,48,32,0.4); }
+  50%      { box-shadow: 0 0 22px rgba(220,60,30,0.9), 0 0 44px rgba(200,40,20,0.35); }
+`;
+
+const glowGreen = keyframes`
+  0%,100% { box-shadow: 0 0 4px rgba(42,90,58,0.4); }
+  50%      { box-shadow: 0 0 14px rgba(58,160,80,0.75), 0 0 28px rgba(42,120,58,0.3); }
+`;
+
+const fadeSlideIn = keyframes`
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+`;
+
+const popIn = keyframes`
+  0%   { transform: scale(0); opacity: 0; }
+  65%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+const dotPulse = keyframes`
+  0%,100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.8; }
+`;
+
+// ダイアログ用スライドアップトランジション
+const SlideUp = forwardRef<unknown, TransitionProps & { children: React.ReactElement }>(
+  (props, ref) => <Slide direction="up" ref={ref} {...props} />,
+);
 
 const FAB_STYLE = {
   bgcolor: 'rgba(20,40,70,0.88)',
@@ -229,6 +304,7 @@ function GameMap({
   selectingTarget,
   onProvinceClick,
   onCancelDispatch,
+  showAllProvinces,
 }: {
   ownedProvinces: string[];
   daimyoColor: string;
@@ -236,6 +312,7 @@ function GameMap({
   selectingTarget: boolean;
   onProvinceClick?: (id: string) => void;
   onCancelDispatch?: () => void;
+  showAllProvinces?: boolean;
 }) {
   const [vb, setVb] = useState<VB>(VB_FULL);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -346,7 +423,7 @@ function GameMap({
         {PROVINCES.map((p) => {
           const isOwned = ownedProvinces.includes(p.id);
           const isAttackable = attackable.includes(p.id);
-          const isClickable = selectingTarget && isAttackable;
+          const isClickable = (selectingTarget && isAttackable) || (showAllProvinces && onProvinceClick);
           return (
             <g
               key={p.id}
@@ -354,7 +431,7 @@ function GameMap({
               style={{ cursor: isClickable ? 'pointer' : 'default' }}
             >
               <polygon
-                points={p.points}
+                points={getPolygonPoints(p)}
                 fill={
                   isOwned ? daimyoColor
                   : isAttackable && selectingTarget ? '#cc3030'
@@ -368,8 +445,15 @@ function GameMap({
                   : isAttackable ? '#ff666688'
                   : '#2a4a2a'
                 }
-                strokeWidth={isOwned ? 1.2 : isAttackable && selectingTarget ? 2 : 0.7}
-              />
+                strokeWidth={isOwned ? 1.2 : isAttackable && selectingTarget ? 2.5 : 0.7}
+              >
+                {isAttackable && selectingTarget && (
+                  <animate attributeName="fill-opacity" values="0.55;0.88;0.55" dur="1.4s" repeatCount="indefinite" />
+                )}
+                {isAttackable && selectingTarget && (
+                  <animate attributeName="stroke-width" values="1.5;3;1.5" dur="1.4s" repeatCount="indefinite" />
+                )}
+              </polygon>
               <text
                 x={p.labelX}
                 y={p.labelY}
@@ -452,20 +536,38 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     security: save.security,
     population: save.population,
     ownedProvinces: save.ownedProvinces.length > 0 ? save.ownedProvinces : [daimyo.homeProvinceId],
+    recruitedRetainers: save.recruitedRetainers ?? [],
+    myPrisoners: save.myPrisoners ?? [],
   });
 
-  const [assignments, setAssignments] = useState<Record<string, number>>(() =>
-    Object.fromEntries(retainers.map((r) => [r.id, save.retainerAssignments[r.id] ?? 0])),
-  );
+  const [assignments, setAssignments] = useState<Record<string, number>>(() => {
+    const allIds = [
+      ...retainers.map((r) => r.id),
+      ...(save.recruitedRetainers ?? []).map((r) => r.id),
+    ];
+    return Object.fromEntries(allIds.map((id) => [id, save.retainerAssignments[id] ?? 0]));
+  });
 
   const [playtime, setPlaytime] = useState(save.playtimeSeconds);
   const [tab, setTab] = useState(0);
   const [log, setLog] = useState<string[]>([`${save.year}年${save.month}月: ${save.playtimeSeconds === 0 ? 'ゲーム開始' : '再開'}`]);
-  const [battle, setBattle] = useState<BattleDialog>({ open: false, retainers: [], targetProvinceId: '', result: null });
+  const EMPTY_BATTLE: BattleDialog = { open: false, phase: 'confirm', retainers: [], targetProvinceId: '', result: null, autoRecruited: [], pendingCapture: [], captureDecisions: {}, newMyPrisoners: [] };
+  const [battle, setBattle] = useState<BattleDialog>(EMPTY_BATTLE);
   const [saving, setSaving] = useState(false);
   const [actionsUsed, setActionsUsed] = useState(0);
   const [selectedRetainers, setSelectedRetainers] = useState<Set<string>>(new Set());
   const [selectingTarget, setSelectingTarget] = useState(false);
+  const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
+
+  const allRetainers = useMemo<Retainer[]>(
+    () => [
+      ...retainers,
+      ...state.recruitedRetainers.map((r) => ({ id: r.id, name: r.name, nameReading: r.nameReading, daimyoId: daimyoId, stats: r.stats })),
+    ],
+    [retainers, state.recruitedRetainers, daimyoId],
+  );
+
+  const prisonerIds = useMemo(() => new Set(state.myPrisoners.map((p) => p.id)), [state.myPrisoners]);
 
   const totalAssigned = useMemo(() => Object.values(assignments).reduce((a, b) => a + b, 0), [assignments]);
   const availableSoldiers = state.soldiers - totalAssigned;
@@ -475,7 +577,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     () => Array.from(selectedRetainers).reduce((sum, id) => sum + (assignments[id] ?? 0), 0),
     [selectedRetainers, assignments],
   );
-  const canDispatch = selectedRetainers.size > 0 && selectedTotalSoldiers > 0 && attackable.length > 0;
+  const canDispatch = selectedRetainers.size > 0 && selectedTotalSoldiers > 0 && attackable.length > 0 && Array.from(selectedRetainers).every(id => !prisonerIds.has(id));
 
   const addLog = (msg: string, s: GameState = state) =>
     setLog((prev) => [`${s.year}年${s.month}月: ${msg}`, ...prev].slice(0, 25));
@@ -493,6 +595,8 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     save.ownedProvinces = newState.ownedProvinces;
     save.retainerAssignments = newAssignments;
     save.playtimeSeconds = newPlaytime;
+    save.recruitedRetainers = newState.recruitedRetainers;
+    save.myPrisoners = newState.myPrisoners;
     await writeSaveSlot(save);
     setSaving(false);
   };
@@ -516,6 +620,21 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
 
     const income = calcProvinceIncome(state.ownedProvinces);
 
+    // 捕虜解放チェック（ターン経過 or 敵大名の全領地制圧）
+    const newOwnedProvinces = state.ownedProvinces;
+    const releasedNames: string[] = [];
+    const updatedPrisoners: MyPrisonerData[] = [];
+    for (const p of state.myPrisoners) {
+      const enemyProvinces = PROVINCES.filter((prov) => prov.daimyoId === p.capturedByDaimyoId);
+      const enemyDefeated = enemyProvinces.length > 0 && enemyProvinces.every((prov) => newOwnedProvinces.includes(prov.id));
+      const newTurnsLeft = p.turnsLeft - 1;
+      if (newTurnsLeft <= 0 || enemyDefeated) {
+        releasedNames.push(p.name);
+      } else {
+        updatedPrisoners.push({ ...p, turnsLeft: newTurnsLeft });
+      }
+    }
+
     const newState: GameState = {
       ...state,
       year: newYear,
@@ -524,6 +643,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
       soldiers: Math.max(0, state.soldiers - starveDead + income.soldiers),
       gold: state.gold + income.gold,
       security: Math.min(100, state.security + 1),
+      myPrisoners: updatedPrisoners,
     };
     const newPlaytime = playtime + 600;
 
@@ -534,6 +654,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     const starvMsg = starveDead > 0 ? `、餓死 -${starveDead}兵` : '';
     const incomeMsg = `地域収入: 志願兵+${income.soldiers}、兵糧+${income.food}、金+${income.gold}`;
     addLog(`月が改まった（兵糧消費 -${upkeep}${starvMsg}）　${incomeMsg}`, newState);
+    if (releasedNames.length > 0) {
+      addLog(`【釈放】${releasedNames.join('・')}が帰還した`, newState);
+    }
 
     persistSave(newState, assignments, newPlaytime);
   };
@@ -572,12 +695,12 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
   // ── マップ上で国をタップ → 戦闘ダイアログ ──
   const handleProvinceClick = (provinceId: string) => {
     if (!selectingTarget) return;
-    const selectedList = retainers.filter((r) => selectedRetainers.has(r.id));
-    setBattle({ open: true, retainers: selectedList, targetProvinceId: provinceId, result: null });
+    const selectedList = allRetainers.filter((r) => selectedRetainers.has(r.id));
+    setBattle({ open: true, phase: 'confirm', retainers: selectedList, targetProvinceId: provinceId, result: null, autoRecruited: [], pendingCapture: [], captureDecisions: {}, newMyPrisoners: [] });
     setSelectingTarget(false);
   };
 
-  // ── 戦闘実行（セーブ含む） ──
+  // ── 戦闘実行 ──
   const executeBattle = () => {
     if (!battle.retainers.length || !battle.targetProvinceId) return;
     const totalSoldiers = battle.retainers.reduce((sum, r) => sum + (assignments[r.id] ?? 0), 0);
@@ -595,22 +718,72 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
     const newState: GameState = {
       ...state,
       soldiers: Math.max(0, state.soldiers - result.casualties),
-      ownedProvinces:
-        result.won && result.gained ? [...state.ownedProvinces, result.gained] : state.ownedProvinces,
+      ownedProvinces: result.won && result.gained ? [...state.ownedProvinces, result.gained] : state.ownedProvinces,
     };
-
-    setState(newState);
-    setAssignments(newAssignments);
-    setSelectedRetainers(new Set());
 
     const names = battle.retainers.map((r) => r.name).join('・');
     addLog(`[${names}] ${result.message}`, newState);
-    setBattle((prev) => ({ ...prev, result }));
 
-    persistSave(newState, newAssignments, playtime);
+    if (result.won) {
+      // 捕縛フェーズへ：敵大名の武将を対象に捕縛判定
+      const recruitedIds = new Set(state.recruitedRetainers.map((r) => r.id));
+      const enemyRetainers = getRetainersByDaimyo(target.daimyoId).filter((r) => !recruitedIds.has(r.id));
+      const captureRate = calcCaptureChance(battle.retainers);
+      const autoRecruited: Retainer[] = [];
+      const pendingCapture: Retainer[] = [];
+      for (const er of enemyRetainers) {
+        if (Math.random() < captureRate) autoRecruited.push(er);
+        else pendingCapture.push(er);
+      }
+      // 自動捕縛武将を即時追加
+      const newRecruited: RecruitedRetainerData[] = autoRecruited.map((r) => ({ id: r.id, name: r.name, nameReading: r.nameReading, originalDaimyoId: r.daimyoId, stats: r.stats }));
+      const addedAssignments = Object.fromEntries(autoRecruited.map((r) => [r.id, 0]));
+      const finalState: GameState = { ...newState, recruitedRetainers: [...state.recruitedRetainers, ...newRecruited] };
+      const finalAssignments = { ...newAssignments, ...addedAssignments };
+      setState(finalState);
+      setAssignments(finalAssignments);
+      setSelectedRetainers(new Set());
+      setBattle((prev) => ({ ...prev, phase: 'capture', result, autoRecruited, pendingCapture, captureDecisions: {} }));
+      persistSave(finalState, finalAssignments, playtime);
+    } else {
+      // 捕虜フェーズへ：参戦武将の捕虜判定（個別にステータスで判定）
+      const capturedRetainers = battle.retainers.filter((r) => Math.random() < calcPrisonerChance(r));
+      setState(newState);
+      setAssignments(newAssignments);
+      setSelectedRetainers(new Set());
+      setBattle((prev) => ({ ...prev, phase: 'prisoner', result, newMyPrisoners: capturedRetainers }));
+      persistSave(newState, newAssignments, playtime);
+    }
   };
 
-  const closeBattle = () => setBattle({ open: false, retainers: [], targetProvinceId: '', result: null });
+  // ── 捕縛フェーズ：処遇決定 ──
+  const setCaptureDecision = (retainerId: string, decision: 'release' | 'execute') => {
+    setBattle((prev) => ({ ...prev, captureDecisions: { ...prev.captureDecisions, [retainerId]: decision } }));
+  };
+
+  // ── 捕縛/捕虜フェーズ完了 ──
+  const finalizeBattleAndClose = () => {
+    if (battle.phase === 'prisoner' && battle.newMyPrisoners.length > 0) {
+      const newPrisoners: MyPrisonerData[] = battle.newMyPrisoners.map((r) => ({
+        id: r.id, name: r.name, nameReading: r.nameReading, stats: r.stats,
+        capturedByDaimyoId: getProvince(battle.targetProvinceId)?.daimyoId ?? '',
+        turnsLeft: PRISONER_TURNS,
+      }));
+      const finalState: GameState = { ...state, myPrisoners: [...state.myPrisoners, ...newPrisoners] };
+      setState(finalState);
+      persistSave(finalState, assignments, playtime);
+    }
+    setBattle({ open: false, phase: 'confirm', retainers: [], targetProvinceId: '', result: null, autoRecruited: [], pendingCapture: [], captureDecisions: {}, newMyPrisoners: [] });
+  };
+
+  const closeBattle = () => setBattle({ open: false, phase: 'confirm', retainers: [], targetProvinceId: '', result: null, autoRecruited: [], pendingCapture: [], captureDecisions: {}, newMyPrisoners: [] });
+
+  const handleProvinceInfoClick = (provinceId: string) => {
+    const province = getProvince(provinceId);
+    if (province) {
+      setSelectedProvince(province);
+    }
+  };
 
   // ─── レンダリング ──────────────────────────────────────
   return (
@@ -649,6 +822,8 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
                 borderRadius: 1,
                 bgcolor: i < actionsUsed ? 'rgba(60,60,80,0.6)' : '#4a8abc',
                 border: `1px solid ${i < actionsUsed ? '#334' : '#6aacdc'}`,
+                transition: 'all 0.3s ease',
+                animation: i >= actionsUsed ? `${dotPulse} ${1.8 + i * 0.3}s ease infinite` : 'none',
               }}
             />
           ))}
@@ -673,6 +848,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
             minWidth: 0,
             flexShrink: 0,
             whiteSpace: 'nowrap',
+            animation: `${glowGreen} 2.4s ease infinite`,
+            transition: 'transform 0.12s ease',
+            '&:active': { transform: 'scale(0.93)' },
           }}
         >
           ターン終了
@@ -718,7 +896,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
       </Box>
 
       {/* メインコンテンツ */}
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
         {/* 地図タブ */}
         {tab === 0 && (
@@ -736,8 +914,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
                 daimyoColor={daimyo.color}
                 attackable={attackable.map((p) => p.id)}
                 selectingTarget={selectingTarget}
-                onProvinceClick={handleProvinceClick}
+                onProvinceClick={selectingTarget ? handleProvinceClick : handleProvinceInfoClick}
                 onCancelDispatch={cancelDispatch}
+                showAllProvinces={true}
               />
             </Box>
 
@@ -754,7 +933,17 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
               scrollbarWidth: 'none',
             }}>
               {log.map((entry, i) => (
-                <Typography key={i} variant="caption" sx={{ display: 'block', color: i === 0 ? '#cce0f5' : '#445566', fontSize: '0.7rem', lineHeight: 1.7 }}>
+                <Typography
+                  key={entry}
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    color: i === 0 ? '#cce0f5' : '#445566',
+                    fontSize: '0.7rem',
+                    lineHeight: 1.7,
+                    animation: i === 0 ? `${fadeSlideIn} 0.35s ease` : 'none',
+                  }}
+                >
                   {entry}
                 </Typography>
               ))}
@@ -764,55 +953,62 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
 
         {/* 内政タブ */}
         {tab === 1 && (
-          <Box sx={{ height: '100%', overflowY: 'auto', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" sx={{ color: '#667788', letterSpacing: '0.1em' }}>内政コマンド</Typography>
-              <Typography variant="caption" sx={{ color: actionsUsed >= MAX_ACTIONS ? '#ff6644' : '#4a8abc', fontWeight: 'bold' }}>
-                {actionsUsed >= MAX_ACTIONS ? '今ターン行動終了' : `あと ${MAX_ACTIONS - actionsUsed} 回`}
-              </Typography>
-            </Box>
+          <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="caption" sx={{ color: '#667788', letterSpacing: '0.1em', fontSize: '0.85rem' }}>内政コマンド</Typography>
+                <Typography variant="caption" sx={{ color: actionsUsed >= MAX_ACTIONS ? '#ff6644' : '#4a8abc', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                  {actionsUsed >= MAX_ACTIONS ? '今ターン行動終了' : `あと ${MAX_ACTIONS - actionsUsed} 回`}
+                </Typography>
+              </Box>
 
-            {INTERNAL_ACTIONS.map((action) => {
-              const canDo = actionsUsed < MAX_ACTIONS && action.canExecute(state);
-              return (
-                <Card
-                  key={action.id}
-                  sx={{
-                    background: canDo ? `${action.color}18` : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${canDo ? action.color + '44' : 'rgba(255,255,255,0.05)'}`,
-                  }}
-                >
-                  <CardContent sx={{ p: '14px 16px !important' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography sx={{ fontSize: '1.3rem' }}>{action.icon}</Typography>
-                      <Typography sx={{ fontWeight: 'bold', color: canDo ? '#ddeeff' : '#445566', fontSize: '1rem' }}>{action.name}</Typography>
-                      <Box sx={{ flex: 1 }} />
-                      <Chip label={action.costLabel} size="small" sx={{ fontSize: '0.65rem', height: 20, bgcolor: 'rgba(255,100,100,0.12)', color: '#ff9999' }} />
-                    </Box>
-                    <Typography sx={{ fontSize: '0.78rem', color: '#8899aa', mb: 1, lineHeight: 1.6 }}>{action.description}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography sx={{ fontSize: '0.74rem', color: '#55aa77', flex: 1 }}>効果: {action.effectLabel}</Typography>
-                      <Button
-                        variant="contained"
-                        disabled={!canDo}
-                        onClick={() => executeAction(action)}
-                        sx={{
-                          fontSize: '0.82rem',
-                          px: 2.5,
-                          py: 0.8,
-                          minWidth: 0,
-                          background: canDo ? action.color : undefined,
-                          '&:hover': { background: canDo ? action.color + 'cc' : undefined },
-                          '&.Mui-disabled': { opacity: 0.3 },
-                        }}
-                      >
-                        実行
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              );
-            })}
+              {INTERNAL_ACTIONS.map((action) => {
+                const canDo = actionsUsed < MAX_ACTIONS && action.canExecute(state);
+                return (
+                  <Card
+                    key={action.id}
+                    sx={{
+                      mb: 1.5,
+                      background: canDo ? `${action.color}18` : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${canDo ? action.color + '44' : 'rgba(255,255,255,0.05)'}`,
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                      '&:active': canDo ? { transform: 'scale(0.975)', boxShadow: `0 0 14px ${action.color}55` } : {},
+                    }}
+                  >
+                    <CardContent sx={{ p: '16px 18px !important' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography sx={{ fontSize: '1.4rem', transition: 'transform 0.2s', '.MuiCard-root:active &': canDo ? { transform: 'scale(1.15) rotate(-8deg)' } : {} }}>{action.icon}</Typography>
+                        <Typography sx={{ fontWeight: 'bold', color: canDo ? '#ddeeff' : '#445566', fontSize: '1.05rem' }}>{action.name}</Typography>
+                        <Box sx={{ flex: 1 }} />
+                        <Chip label={action.costLabel} size="small" sx={{ fontSize: '0.7rem', height: 22, bgcolor: 'rgba(255,100,100,0.12)', color: '#ff9999' }} />
+                      </Box>
+                      <Typography sx={{ fontSize: '0.82rem', color: '#8899aa', mb: 1, lineHeight: 1.6 }}>{action.description}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ fontSize: '0.78rem', color: '#55aa77', flex: 1 }}>効果: {action.effectLabel}</Typography>
+                        <Button
+                          variant="contained"
+                          disabled={!canDo}
+                          onClick={() => executeAction(action)}
+                          sx={{
+                            fontSize: '0.85rem',
+                            px: 2.8,
+                            py: 0.9,
+                            minWidth: 0,
+                            background: canDo ? action.color : undefined,
+                            transition: 'transform 0.12s ease, background 0.2s ease',
+                            '&:hover': { background: canDo ? action.color + 'cc' : undefined },
+                            '&:active': { transform: 'scale(0.90)' },
+                            '&.Mui-disabled': { opacity: 0.3 },
+                          }}
+                        >
+                          実行
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </Box>
           </Box>
         )}
 
@@ -827,29 +1023,64 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
                 </Typography>
               </Box>
 
-              {retainers.map((r) => {
+              {/* 捕虜中の武将セクション */}
+              {state.myPrisoners.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography sx={{ color: '#cc6644', fontSize: '0.75rem', mb: 0.8, letterSpacing: '0.05em' }}>◆ 捕虜中の武将</Typography>
+                  {state.myPrisoners.map((p, i) => (
+                    <Card key={p.id} sx={{ mb: 1, background: 'rgba(100,30,10,0.18)', border: '1px solid rgba(180,60,20,0.3)', animation: `${popIn} 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.07}s both` }}>
+                      <CardContent sx={{ p: '10px 14px !important' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography sx={{ color: '#cc8866', fontSize: '0.9rem', fontWeight: 'bold' }}>{p.name}</Typography>
+                            <Typography sx={{ color: '#667788', fontSize: '0.65rem' }}>{p.nameReading}</Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                            <Chip label={`統${p.stats.command}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#c04020aa', color: '#ffaa88' }} />
+                            <Chip label={`知${p.stats.intelligence}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#1040b0aa', color: '#88aaff' }} />
+                            <Chip label={`忠${p.stats.loyalty}`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: '#107040aa', color: '#88dd88' }} />
+                          </Box>
+                          <Chip label={`残${p.turnsLeft}T`} size="small" sx={{ fontSize: '0.62rem', height: 20, bgcolor: 'rgba(150,50,20,0.5)', color: '#ffaa77' }} />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              )}
+
+              {allRetainers.map((r, idx) => {
                 const assigned = assignments[r.id] ?? 0;
                 const isSelected = selectedRetainers.has(r.id);
+                const isPrisoner = prisonerIds.has(r.id);
+                const isRecruited = state.recruitedRetainers.some((rec) => rec.id === r.id);
                 return (
                   <Card
                     key={r.id}
                     sx={{
                       mb: 1.5,
-                      background: isSelected ? 'rgba(180,50,20,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isSelected ? 'rgba(200,80,40,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      background: isPrisoner ? 'rgba(80,20,10,0.2)' : isSelected ? 'rgba(180,50,20,0.15)' : isRecruited ? 'rgba(20,80,60,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isPrisoner ? 'rgba(120,40,20,0.4)' : isSelected ? 'rgba(200,80,40,0.5)' : isRecruited ? 'rgba(40,150,100,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                      transform: isSelected ? 'scale(1.015)' : 'scale(1)',
+                      animation: `${fadeSlideIn} 0.3s ease ${idx * 0.04}s both`,
                     }}
                   >
                     <CardContent sx={{ p: '12px 14px !important' }}>
                       {/* 武将情報 */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Checkbox
-                          checked={isSelected}
-                          disabled={assigned === 0}
-                          onChange={() => toggleRetainer(r.id)}
-                          sx={{ p: 0.5, color: '#556677', '&.Mui-checked': { color: '#ff8866' } }}
-                        />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: isPrisoner ? 0 : 1 }}>
+                        {!isPrisoner && (
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={assigned === 0}
+                            onChange={() => toggleRetainer(r.id)}
+                            sx={{ p: 0.5, color: '#556677', '&.Mui-checked': { color: '#ff8866' } }}
+                          />
+                        )}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography sx={{ color: '#cce0f5', fontSize: '0.95rem', fontWeight: 'bold' }}>{r.name}</Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                            <Typography sx={{ color: isPrisoner ? '#886655' : '#cce0f5', fontSize: '0.95rem', fontWeight: 'bold' }}>{r.name}</Typography>
+                            {isRecruited && <Chip label="捕縛" size="small" sx={{ fontSize: '0.58rem', height: 18, bgcolor: 'rgba(20,100,70,0.6)', color: '#88ddbb' }} />}
+                          </Box>
                           <Typography sx={{ color: '#667788', fontSize: '0.68rem' }}>{r.nameReading}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
@@ -859,45 +1090,49 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
                         </Box>
                       </Box>
 
-                      {/* 兵士割当 */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography sx={{ fontSize: '0.7rem', color: '#556677', flexShrink: 0, mr: 0.5 }}>割当:</Typography>
-                        <IconButton onClick={() => changeAssignment(r.id, -100)} sx={{ p: 0.75, color: '#cc6644' }}>
-                          <RemoveIcon fontSize="small" />
-                        </IconButton>
-                        <Button
-                          onClick={() => changeAssignment(r.id, -50)}
-                          sx={{ minWidth: 44, minHeight: 40, color: '#aa5533', fontSize: '0.72rem', p: 0 }}
-                        >
-                          -50
-                        </Button>
-                        <Box sx={{ flex: 1, textAlign: 'center' }}>
-                          <Typography sx={{ color: assigned > 0 ? '#e8c050' : '#445566', fontWeight: 'bold', fontSize: '1rem' }}>
-                            {assigned.toLocaleString()}
-                          </Typography>
-                        </Box>
-                        <Button
-                          onClick={() => changeAssignment(r.id, 50)}
-                          disabled={availableSoldiers <= 0}
-                          sx={{ minWidth: 44, minHeight: 40, color: '#44aa66', fontSize: '0.72rem', p: 0 }}
-                        >
-                          +50
-                        </Button>
-                        <IconButton onClick={() => changeAssignment(r.id, 100)} disabled={availableSoldiers <= 0} sx={{ p: 0.75, color: '#55bb77' }}>
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
+                      {/* 兵士割当（捕虜中は非表示） */}
+                      {!isPrisoner && (
+                        <>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography sx={{ fontSize: '0.7rem', color: '#556677', flexShrink: 0, mr: 0.5 }}>割当:</Typography>
+                            <IconButton onClick={() => changeAssignment(r.id, -100)} sx={{ p: 0.75, color: '#cc6644' }}>
+                              <RemoveIcon fontSize="small" />
+                            </IconButton>
+                            <Button
+                              onClick={() => changeAssignment(r.id, -50)}
+                              sx={{ minWidth: 44, minHeight: 40, color: '#aa5533', fontSize: '0.72rem', p: 0 }}
+                            >
+                              -50
+                            </Button>
+                            <Box sx={{ flex: 1, textAlign: 'center' }}>
+                              <Typography sx={{ color: assigned > 0 ? '#e8c050' : '#445566', fontWeight: 'bold', fontSize: '1rem' }}>
+                                {assigned.toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Button
+                              onClick={() => changeAssignment(r.id, 50)}
+                              disabled={availableSoldiers <= 0}
+                              sx={{ minWidth: 44, minHeight: 40, color: '#44aa66', fontSize: '0.72rem', p: 0 }}
+                            >
+                              +50
+                            </Button>
+                            <IconButton onClick={() => changeAssignment(r.id, 100)} disabled={availableSoldiers <= 0} sx={{ p: 0.75, color: '#55bb77' }}>
+                              <AddIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
 
-                      {assigned > 0 ? (
-                        <LinearProgress
-                          variant="determinate"
-                          value={Math.min(100, (assigned / Math.max(state.soldiers, 1)) * 100)}
-                          sx={{ height: 4, borderRadius: 2, mt: 0.75, bgcolor: '#1a2a1a', '& .MuiLinearProgress-bar': { bgcolor: isSelected ? '#ff8844' : '#e8c050' } }}
-                        />
-                      ) : (
-                        <Typography sx={{ fontSize: '0.66rem', color: '#445566', mt: 0.3 }}>
-                          ※ 兵士を割り当てると選択できます
-                        </Typography>
+                          {assigned > 0 ? (
+                            <LinearProgress
+                              variant="determinate"
+                              value={Math.min(100, (assigned / Math.max(state.soldiers, 1)) * 100)}
+                              sx={{ height: 4, borderRadius: 2, mt: 0.75, bgcolor: '#1a2a1a', '& .MuiLinearProgress-bar': { bgcolor: isSelected ? '#ff8844' : '#e8c050' } }}
+                            />
+                          ) : (
+                            <Typography sx={{ fontSize: '0.66rem', color: '#445566', mt: 0.3 }}>
+                              ※ 兵士を割り当てると選択できます
+                            </Typography>
+                          )}
+                        </>
                       )}
                     </CardContent>
                   </Card>
@@ -909,7 +1144,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
             <Box sx={{ p: 1.5, borderTop: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, background: 'rgba(0,0,0,0.4)' }}>
               {selectedRetainers.size > 0 && (
                 <Typography variant="caption" sx={{ display: 'block', color: '#ff9966', mb: 1, textAlign: 'center', fontSize: '0.78rem' }}>
-                  {Array.from(selectedRetainers).map((id) => retainers.find((r) => r.id === id)?.name).join('・')}
+                  {Array.from(selectedRetainers).map((id) => allRetainers.find((r) => r.id === id)?.name).join('・')}
                   　計 {selectedTotalSoldiers.toLocaleString()} 兵
                 </Typography>
               )}
@@ -924,6 +1159,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
                   fontWeight: 'bold',
                   fontSize: '0.95rem',
                   py: 1.2,
+                  animation: canDispatch ? `${glowRed} 2s ease infinite` : 'none',
+                  transition: 'transform 0.12s ease',
+                  '&:active': { transform: 'scale(0.95)' },
                   '&.Mui-disabled': { opacity: 0.35 },
                 }}
               >
@@ -951,8 +1189,10 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
           flexShrink: 0,
           background: 'rgba(5,10,20,0.95)',
           borderTop: '1px solid rgba(255,255,255,0.1)',
-          '& .MuiBottomNavigationAction-root': { color: '#445566', minWidth: 0, py: 0.5 },
+          '& .MuiBottomNavigationAction-root': { color: '#445566', minWidth: 0, py: 0.5, transition: 'color 0.2s ease' },
           '& .Mui-selected': { color: '#e8d5a3 !important' },
+          '& .Mui-selected svg': { animation: `${popIn} 0.35s cubic-bezier(0.34,1.56,0.64,1)` },
+          '& .Mui-selected .MuiBottomNavigationAction-label': { animation: `${fadeSlideIn} 0.3s ease` },
           '& .MuiBottomNavigationAction-label': { fontSize: '0.68rem !important' },
         }}
       >
@@ -964,18 +1204,24 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
       {/* 戦闘ダイアログ */}
       <Dialog
         open={battle.open}
-        onClose={closeBattle}
+        onClose={battle.phase === 'confirm' ? closeBattle : undefined}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: { background: '#0d1a2e', border: '1px solid #334455', mx: 2 } } }}
+        slots={{ transition: SlideUp }}
+        slotProps={{
+          paper: { sx: { background: 'linear-gradient(160deg,#0d1a2e 0%,#0a1220 100%)', border: '1px solid #334466', mx: 2, borderRadius: 2, boxShadow: '0 24px 60px rgba(0,0,10,0.7)' } },
+          backdrop: { sx: { backdropFilter: 'blur(4px)', background: 'rgba(0,0,8,0.65)' } },
+        }}
       >
         <DialogTitle sx={{ color: '#e8d5a3', pb: 1, fontSize: '1rem' }}>
-          {battle.result
-            ? '戦闘結果'
-            : `出陣 ─ ${battle.retainers.map((r) => r.name).join('・')}`}
+          {battle.phase === 'confirm' && `出陣 ─ ${battle.retainers.map((r) => r.name).join('・')}`}
+          {battle.phase === 'result' && '戦闘結果'}
+          {battle.phase === 'capture' && '捕縛処理'}
+          {battle.phase === 'prisoner' && '捕虜報告'}
         </DialogTitle>
         <DialogContent>
-          {!battle.result ? (
+          {/* 出陣確認フェーズ */}
+          {battle.phase === 'confirm' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ color: '#667788' }}>出陣兵士数（合計）</Typography>
@@ -991,37 +1237,216 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
               </Box>
               <Box sx={{ p: 1.5, background: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
                 <Typography sx={{ fontSize: '0.75rem', color: '#8899aa' }}>
-                  攻撃力は最高統率値（{battle.retainers.length > 0 ? Math.max(...battle.retainers.map((r) => r.stats.command)) : 0}）と兵数に比例します。勝敗にはランダム要素があります。
+                  攻撃力は最高統率値（{battle.retainers.length > 0 ? Math.max(...battle.retainers.map((r) => r.stats.command)) : 0}）と兵数に比例します。捕縛確率は参戦武将のステータス総合値に依存します。
                 </Typography>
               </Box>
             </Box>
-          ) : (
+          )}
+
+          {/* 戦闘結果フェーズ */}
+          {battle.phase === 'result' && battle.result && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
-              <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>{battle.result.won ? '🏆' : '💀'}</Typography>
-              <Typography sx={{ color: battle.result.won ? '#55ee88' : '#ee5555', fontWeight: 'bold', fontSize: '1.1rem', mb: 1 }}>
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-block',
+                  fontSize: '2.8rem',
+                  mb: 1,
+                  animation: `${battle.result.won ? bounceIn : shakeX} 0.7s cubic-bezier(0.36,0.07,0.19,0.97) forwards`,
+                }}
+              >
+                {battle.result.won ? '🏆' : '💀'}
+              </Box>
+              <Typography sx={{ color: battle.result.won ? '#55ee88' : '#ee5555', fontWeight: 'bold', fontSize: '1.1rem', mb: 1, animation: `${fadeSlideIn} 0.5s 0.2s ease both` }}>
                 {battle.result.message}
               </Typography>
               {battle.result.won && battle.result.gained && (
-                <Chip label={`${getProvince(battle.result.gained)?.name} を獲得`} sx={{ bgcolor: '#2a5a2a', color: '#88ee88', mt: 0.5 }} />
+                <Chip label={`${getProvince(battle.result.gained)?.name} を獲得`} sx={{ bgcolor: '#2a5a2a', color: '#88ee88', mt: 0.5, animation: `${popIn} 0.5s 0.5s cubic-bezier(0.34,1.56,0.64,1) both` }} />
+              )}
+            </Box>
+          )}
+
+          {/* 捕縛処理フェーズ（勝利時） */}
+          {battle.phase === 'capture' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {battle.autoRecruited.length > 0 && (
+                <Box>
+                  <Typography sx={{ color: '#55ddaa', fontSize: '0.8rem', fontWeight: 'bold', mb: 0.6 }}>✅ 仲間になった武将</Typography>
+                  {battle.autoRecruited.map((r, i) => (
+                    <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 1, py: 0.5, bgcolor: 'rgba(20,80,50,0.3)', borderRadius: 1, mb: 0.5, animation: `${popIn} 0.45s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.1}s both` }}>
+                      <Typography sx={{ flex: 1, color: '#88ddbb', fontSize: '0.9rem', fontWeight: 'bold' }}>{r.name}</Typography>
+                      <Chip label={`統${r.stats.command}`} size="small" sx={{ fontSize: '0.6rem', height: 18, bgcolor: '#c04020aa', color: '#ffaa88' }} />
+                      <Chip label={`知${r.stats.intelligence}`} size="small" sx={{ fontSize: '0.6rem', height: 18, bgcolor: '#1040b0aa', color: '#88aaff' }} />
+                      <Chip label={`忠${r.stats.loyalty}`} size="small" sx={{ fontSize: '0.6rem', height: 18, bgcolor: '#107040aa', color: '#88dd88' }} />
+                    </Box>
+                  ))}
+                </Box>
+              )}
+              {battle.pendingCapture.length > 0 && (
+                <Box>
+                  <Typography sx={{ color: '#ddaa55', fontSize: '0.8rem', fontWeight: 'bold', mb: 0.6 }}>⚖ 処遇を選択</Typography>
+                  {battle.pendingCapture.map((r) => {
+                    const decision = battle.captureDecisions[r.id];
+                    return (
+                      <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 1, py: 0.7, bgcolor: 'rgba(60,40,10,0.3)', borderRadius: 1, mb: 0.6 }}>
+                        <Typography sx={{ color: '#ddcc88', fontSize: '0.85rem', fontWeight: 'bold', minWidth: 72 }}>{r.name}</Typography>
+                        <Box sx={{ flex: 1 }} />
+                        <Button size="small" variant={decision === 'release' ? 'contained' : 'outlined'} onClick={() => setCaptureDecision(r.id, 'release')}
+                          sx={{ fontSize: '0.7rem', px: 1, py: 0.3, minWidth: 44, color: decision === 'release' ? '#fff' : '#88aacc', borderColor: '#446688', bgcolor: decision === 'release' ? '#336688' : 'transparent' }}>
+                          釈放
+                        </Button>
+                        <Button size="small" variant={decision === 'execute' ? 'contained' : 'outlined'} onClick={() => setCaptureDecision(r.id, 'execute')}
+                          sx={{ fontSize: '0.7rem', px: 1, py: 0.3, minWidth: 44, color: decision === 'execute' ? '#fff' : '#cc8888', borderColor: '#884444', bgcolor: decision === 'execute' ? '#883030' : 'transparent' }}>
+                          処断
+                        </Button>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+              {battle.autoRecruited.length === 0 && battle.pendingCapture.length === 0 && (
+                <Typography sx={{ color: '#667788', fontSize: '0.85rem', textAlign: 'center', py: 1 }}>
+                  捕縛できた武将はいなかった。
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {/* 捕虜フェーズ（敗北時） */}
+          {battle.phase === 'prisoner' && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Box component="span" sx={{ display: 'inline-block', fontSize: '2rem', mb: 0.5, animation: `${shakeX} 0.6s 0.1s ease both` }}>⛓</Box>
+                <Typography sx={{ color: '#ee5555', fontSize: '0.9rem', mb: 1 }}>{battle.result?.message}</Typography>
+              </Box>
+              {battle.newMyPrisoners.length > 0 ? (
+                <Box>
+                  <Typography sx={{ color: '#cc8844', fontSize: '0.8rem', fontWeight: 'bold', mb: 0.6 }}>捕虜になった武将</Typography>
+                  {battle.newMyPrisoners.map((r, i) => (
+                    <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 1, py: 0.5, bgcolor: 'rgba(80,20,10,0.3)', borderRadius: 1, mb: 0.5, animation: `${popIn} 0.45s cubic-bezier(0.34,1.56,0.64,1) ${0.1 + i * 0.1}s both` }}>
+                      <Typography sx={{ flex: 1, color: '#cc8866', fontSize: '0.9rem', fontWeight: 'bold' }}>{r.name}</Typography>
+                      <Chip label={`${PRISONER_TURNS}T後に解放`} size="small" sx={{ fontSize: '0.6rem', height: 18, bgcolor: 'rgba(120,40,10,0.5)', color: '#ffaa77' }} />
+                    </Box>
+                  ))}
+                  <Typography sx={{ color: '#667788', fontSize: '0.72rem', mt: 1 }}>
+                    ※ {PRISONER_TURNS}ターン後、または敵大名を滅ぼすと解放されます。
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography sx={{ color: '#667788', fontSize: '0.85rem', textAlign: 'center' }}>
+                  捕虜になった武将はいなかった。
+                </Typography>
               )}
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
-          {!battle.result ? (
+          {battle.phase === 'confirm' && (
             <>
-              <Button onClick={closeBattle} sx={{ color: '#667788', flex: 1 }}>キャンセル</Button>
-              <Button
-                variant="contained"
-                onClick={executeBattle}
-                sx={{ background: '#c04020', '&:hover': { background: '#e06030' }, flex: 1 }}
-              >
-                開戦
+              <Button onClick={closeBattle} sx={{ color: '#667788', fontSize: '0.8rem', transition: 'transform 0.12s', '&:active': { transform: 'scale(0.92)' } }}>
+                キャンセル
+              </Button>
+              <Button onClick={executeBattle} variant="contained" sx={{ background: '#c03020', fontSize: '0.8rem', transition: 'transform 0.12s', '&:active': { transform: 'scale(0.92)' } }}>
+                攻撃
               </Button>
             </>
-          ) : (
-            <Button onClick={closeBattle} variant="contained" fullWidth sx={{ background: '#2a4a6a' }}>閉じる</Button>
           )}
+          {battle.phase === 'result' && (
+            <Button onClick={() => setBattle((prev) => ({ ...prev, phase: battle.result?.won ? 'capture' : 'prisoner' }))} variant="contained" sx={{ background: '#4a8abc', fontSize: '0.8rem', animation: `${popIn} 0.4s 0.3s cubic-bezier(0.34,1.56,0.64,1) both`, transition: 'transform 0.12s', '&:active': { transform: 'scale(0.92)' } }}>
+              次へ
+            </Button>
+          )}
+          {battle.phase === 'capture' && (
+            <Button
+              onClick={finalizeBattleAndClose}
+              variant="contained"
+              disabled={battle.pendingCapture.some((r) => !battle.captureDecisions[r.id])}
+              sx={{ background: '#4a8abc', fontSize: '0.8rem', transition: 'transform 0.12s', '&:active': { transform: 'scale(0.92)' }, '&.Mui-disabled': { opacity: 0.4 } }}
+            >
+              完了
+            </Button>
+          )}
+          {battle.phase === 'prisoner' && (
+            <Button onClick={finalizeBattleAndClose} variant="contained" sx={{ background: '#4a8abc', fontSize: '0.8rem', transition: 'transform 0.12s', '&:active': { transform: 'scale(0.92)' } }}>
+              閉じる
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* 地域情報ダイアログ */}
+      <Dialog
+        open={selectedProvince !== null}
+        onClose={() => setSelectedProvince(null)}
+        maxWidth="xs"
+        fullWidth
+        slots={{ transition: SlideUp }}
+        slotProps={{
+          paper: { sx: { background: 'linear-gradient(160deg,#0d1a2e 0%,#0a1220 100%)', border: '1px solid #334466', mx: 2, borderRadius: 2, boxShadow: '0 24px 60px rgba(0,0,10,0.7)' } },
+          backdrop: { sx: { backdropFilter: 'blur(4px)', background: 'rgba(0,0,8,0.65)' } },
+        }}
+      >
+        <DialogTitle sx={{ color: '#e8d5a3', pb: 1, fontSize: '1rem' }}>
+          {selectedProvince?.name}
+        </DialogTitle>
+        <DialogContent>
+          {selectedProvince && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: getDaimyo(selectedProvince.daimyoId)?.color, flexShrink: 0 }} />
+                <Typography sx={{ color: '#8899aa', fontSize: '0.8rem' }}>
+                  所属大名: {getDaimyo(selectedProvince.daimyoId)?.name || '中立'}
+                </Typography>
+              </Box>
+              <Box sx={{ p: 1.5, background: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#8899aa', mb: 0.5 }}>地域情報</Typography>
+                <Typography sx={{ fontSize: '0.8rem', color: '#cce0f5', mb: 0.5 }}>
+                  地方: {selectedProvince.region}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#8899aa' }}>生産兵力</Typography>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#e87050', fontWeight: 'bold' }}>
+                    {selectedProvince.productionMilitary}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#8899aa' }}>生産兵糧</Typography>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#70c870', fontWeight: 'bold' }}>
+                    {selectedProvince.productionFood}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#8899aa' }}>生産金</Typography>
+                  <Typography sx={{ fontSize: '0.8rem', color: '#e8c050', fontWeight: 'bold' }}>
+                    {selectedProvince.productionGold}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ p: 1.5, background: 'rgba(255,255,255,0.04)', borderRadius: 1 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: '#8899aa', mb: 0.5 }}>隣接地域</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selectedProvince.adjacent.map((adj) => {
+                    const adjProvince = getProvince(adj);
+                    return (
+                      <Chip
+                        key={adj}
+                        label={adjProvince?.name || adj}
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: 20, bgcolor: 'rgba(255,255,255,0.08)', color: '#8899aa' }}
+                      />
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setSelectedProvince(null)} variant="contained" sx={{ background: '#4a8abc', fontSize: '0.8rem' }}>
+            閉じる
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,0 +1,857 @@
+[
+  {
+    "id": "shimazu",
+    "name": "島津義久",
+    "nameReading": "しまづよしひさ",
+    "clan": "島津氏",
+    "color": "#c0152a",
+    "homeProvinceId": "satsuma",
+    "stats": {
+      "military": 85,
+      "politics": 72,
+      "charisma": 78
+    },
+    "description": "薩摩を拠点とする九州の覇者。島津四兄弟の長兄として島津家の最大版図を築き上げた武将。九州統一を目指し、大友・龍造寺と激しく争った。",
+    "era": "1566年"
+  },
+  {
+    "id": "otomo",
+    "name": "大友宗麟",
+    "nameReading": "おおともそうりん",
+    "clan": "大友氏",
+    "color": "#c07a15",
+    "homeProvinceId": "bungo",
+    "stats": {
+      "military": 74,
+      "politics": 82,
+      "charisma": 70
+    },
+    "description": "キリスト教に帰依した九州の大名。南蛮貿易で栄え、九州六カ国を支配した。ザビエルを招くなど西洋文化の受容にも積極的だった。",
+    "era": "1550年"
+  },
+  {
+    "id": "mori",
+    "name": "毛利元就",
+    "nameReading": "もうりもとなり",
+    "clan": "毛利氏",
+    "color": "#0e7a9a",
+    "homeProvinceId": "aki",
+    "stats": {
+      "military": 88,
+      "politics": 95,
+      "charisma": 83
+    },
+    "description": "謀将として知られる中国地方の覇者。三本の矢の逸話で有名。厳島の戦いで陶晴賢を破り中国十ヶ国を支配した戦国屈指の知将。",
+    "era": "1540年"
+  },
+  {
+    "id": "chosokabe",
+    "name": "長宗我部元親",
+    "nameReading": "ちょうそかべもとちか",
+    "clan": "長宗我部氏",
+    "color": "#2d8a2d",
+    "homeProvinceId": "tosa",
+    "stats": {
+      "military": 80,
+      "politics": 76,
+      "charisma": 74
+    },
+    "description": "四国を統一した英傑。「土佐の出来人」と称され、農民兵士「一領具足」を活用して劣勢を覆した。豊臣秀吉に阻まれ土佐一国に封じられた。",
+    "era": "1560年"
+  },
+  {
+    "id": "oda",
+    "name": "織田信長",
+    "nameReading": "おだのぶなが",
+    "clan": "織田氏",
+    "color": "#c8a415",
+    "homeProvinceId": "owari",
+    "stats": {
+      "military": 92,
+      "politics": 88,
+      "charisma": 90
+    },
+    "description": "尾張から天下統一に最も近づいた革命児。桶狭間の奇襲で今川義元を討ち、鉄砲の集団戦術や楽市楽座など革新的な政策で戦国の常識を塗り替えた。",
+    "era": "1560年"
+  },
+  {
+    "id": "imagawa",
+    "name": "今川義元",
+    "nameReading": "いまがわよしもと",
+    "clan": "今川氏",
+    "color": "#8a15c0",
+    "homeProvinceId": "suruga",
+    "stats": {
+      "military": 78,
+      "politics": 91,
+      "charisma": 82
+    },
+    "description": "東海道の覇者。法律「仮名目録追加」を整備し優れた領国経営を行った。上洛を目指すも桶狭間で織田信長に討ち取られた悲劇の名将。",
+    "era": "1550年"
+  },
+  {
+    "id": "takeda",
+    "name": "武田信玄",
+    "nameReading": "たけだしんげん",
+    "clan": "武田氏",
+    "color": "#c04020",
+    "homeProvinceId": "kai",
+    "stats": {
+      "military": 96,
+      "politics": 89,
+      "charisma": 87
+    },
+    "description": "最強と謳われた武田騎馬軍団を率いる甲斐の虎。「風林火山」の旗印のもと信濃・駿河に版図を拡大。上杉謙信との川中島合戦は戦国最大の激戦。",
+    "era": "1552年"
+  },
+  {
+    "id": "uesugi",
+    "name": "上杉謙信",
+    "nameReading": "うえすぎけんしん",
+    "clan": "上杉氏",
+    "color": "#1540c0",
+    "homeProvinceId": "echigo",
+    "stats": {
+      "military": 98,
+      "politics": 75,
+      "charisma": 92
+    },
+    "description": "越後の龍。義を重んじる不敗の将として知られる。武田信玄と5度の川中島合戦を繰り広げ、関東管領として北条氏にも立ち向かった。",
+    "era": "1553年"
+  },
+  {
+    "id": "hojo",
+    "name": "北条氏康",
+    "nameReading": "ほうじょううじやす",
+    "clan": "後北条氏",
+    "color": "#b0a010",
+    "homeProvinceId": "sagami",
+    "stats": {
+      "military": 83,
+      "politics": 94,
+      "charisma": 85
+    },
+    "description": "関東に覇を唱えた知将。河越夜戦で上杉の大軍を撃破。法整備や徴税制度の確立など優れた内政手腕で関東の民を豊かにした名君。",
+    "era": "1546年"
+  },
+  {
+    "id": "date",
+    "name": "伊達政宗",
+    "nameReading": "だてまさむね",
+    "clan": "伊達氏",
+    "color": "#2a4888",
+    "homeProvinceId": "mutsu",
+    "stats": {
+      "military": 90,
+      "politics": 86,
+      "charisma": 94
+    },
+    "description": "独眼竜として知られる奥州の覇者。21歳で南東北の大半を制圧するも豊臣秀吉の天下統一に阻まれた。もし生まれた時代が10年早ければという惜しまれる武将。",
+    "era": "1584年"
+  },
+  {
+    "id": "saito",
+    "name": "斎藤道三",
+    "nameReading": "さいとうどうさん",
+    "clan": "斎藤氏",
+    "color": "#6aaa10",
+    "homeProvinceId": "mino",
+    "stats": {
+      "military": 86,
+      "politics": 90,
+      "charisma": 78
+    },
+    "description": "下克上の典型として知られる美濃の蝮。油売りから一国の主に成り上がった戦国の梟雄。娘婿の織田信長に才を認められた謀略家。",
+    "era": "1542年"
+  },
+  {
+    "id": "azai",
+    "name": "浅井長政",
+    "nameReading": "あざいながまさ",
+    "clan": "浅井氏",
+    "color": "#10a0c0",
+    "homeProvinceId": "omi",
+    "stats": {
+      "military": 79,
+      "politics": 77,
+      "charisma": 88
+    },
+    "description": "北近江の若き盟主。義を重んじ、朝倉氏への義理から義兄・織田信長に反旗を翻した悲劇の武将。妻はお市の方（信長の妹）。",
+    "era": "1560年"
+  },
+  {
+    "id": "ryuzoji",
+    "name": "龍造寺隆信",
+    "nameReading": "りゅうぞうきたかのぶ",
+    "clan": "龍造寺氏",
+    "color": "#8a2a2a",
+    "homeProvinceId": "hizen",
+    "stats": {
+      "military": 82,
+      "politics": 70,
+      "charisma": 76
+    },
+    "description": "肥前の戦国大名。鍋島直茂を重用して勢力を拡大。九州三國を制圧し「九州の熊」の異名を取った。沖田畷の戦いで島津軍と激突し壮烈な最期を遂げた。",
+    "era": "1570年"
+  },
+  {
+    "id": "amako",
+    "name": "尼子晴久",
+    "nameReading": "あまこはるひさ",
+    "clan": "尼子氏",
+    "color": "#4a4a8a",
+    "homeProvinceId": "iwami",
+    "stats": {
+      "military": 84,
+      "politics": 78,
+      "charisma": 80
+    },
+    "description": "出雲の守護代として山陰八ヶ国を支配した名将。毛利元就と激しく争い、一時は優勢に立つも最終的に衰退。尼子氏の最盛期を築き上げた武将。",
+    "era": "1540年"
+  },
+  {
+    "id": "tokugawa",
+    "name": "徳川家康",
+    "nameReading": "とくがわいえやす",
+    "clan": "徳川氏",
+    "color": "#15a0c8",
+    "homeProvinceId": "mikawa",
+    "stats": {
+      "military": 88,
+      "politics": 96,
+      "charisma": 85
+    },
+    "description": "三河から天下人へ。織田信長の盟友として活躍し、信長死後は豊臣秀吉に仕えた。関ヶ原の戦いで勝利し、江戸幕府を開基。忍耐と知略で天下統一を成し遂げた。",
+    "era": "1560年"
+  },
+  {
+    "id": "asakura",
+    "name": "朝倉義景",
+    "nameReading": "あさくらよしかげ",
+    "clan": "朝倉氏",
+    "color": "#3a6a3a",
+    "homeProvinceId": "echizen",
+    "stats": {
+      "military": 76,
+      "politics": 80,
+      "charisma": 72
+    },
+    "description": "越前の守護大名。一乗谷城を拠点に北陸に覇を唱えた。織田信長と同盟を結ぶも浅井氏との関係から破綻。比叡山焼き討ちなどの悲劇に関わった。",
+    "era": "1560年"
+  },
+  {
+    "id": "mogami",
+    "name": "最上義光",
+    "nameReading": "もがみよしあき",
+    "clan": "最上氏",
+    "color": "#6a4a2a",
+    "homeProvinceId": "dewa",
+    "stats": {
+      "military": 85,
+      "politics": 92,
+      "charisma": 78
+    },
+    "description": "出羽の名将。「奥州の狐」の異名を取り、伊達氏と争いつつも巧みな外交で領国を拡大。豊臣秀吉に仕え、関ヶ原の戦いでは徳川方として活躍した。",
+    "era": "1570年"
+  },
+  {
+    "id": "satake",
+    "name": "佐竹義重",
+    "nameReading": "さたけよししげ",
+    "clan": "佐竹氏",
+    "color": "#5a3a7a",
+    "homeProvinceId": "hitachi",
+    "stats": {
+      "military": 81,
+      "politics": 78,
+      "charisma": 83
+    },
+    "description": "常陸の戦国大名。「鬼義重」の異名を取り、関東管領上杉氏と結んで北条氏に対抗。関東の有力大名として知られ、豊臣秀吉にも認められた。",
+    "era": "1570年"
+  },
+  {
+    "id": "nanbu",
+    "name": "南部晴政",
+    "nameReading": "なんぶはるまさ",
+    "clan": "南部氏",
+    "color": "#4a6a5a",
+    "homeProvinceId": "u_zen",
+    "stats": {
+      "military": 75,
+      "politics": 72,
+      "charisma": 76
+    },
+    "description": "陸奥北の戦国大名。南部氏の最盛期を築き上げ、奥州六郡を支配。伊達氏と争いつつも勢力を維持した。",
+    "era": "1550年"
+  },
+  {
+    "id": "honganji",
+    "name": "本願寺顕如",
+    "nameReading": "ほんがんじけんにょ",
+    "clan": "本願寺氏",
+    "color": "#8a6a2a",
+    "homeProvinceId": "kaga",
+    "stats": {
+      "military": 70,
+      "politics": 85,
+      "charisma": 95
+    },
+    "description": "一向宗の門主。石山本願寺を拠点に織田信長と10年もの間戦い抜いた。宗教的なカリスマ性で全国の門徒を動員し、信長最大の難敵となった。",
+    "era": "1570年"
+  },
+  {
+    "id": "miyoshi",
+    "name": "三好長慶",
+    "nameReading": "みよしなかよし",
+    "clan": "三好氏",
+    "color": "#6a5a8a",
+    "homeProvinceId": "settsu",
+    "stats": {
+      "military": 83,
+      "politics": 88,
+      "charisma": 75
+    },
+    "description": "畿内を支配した戦国大名。細川氏の家臣から台頭し、将軍足利義輝を追放して畿内の実権を握った。三好三人衆の混乱で衰退したが、畿内の覇者として知られる。",
+    "era": "1550年"
+  },
+  {
+    "id": "so",
+    "name": "宗氏",
+    "nameReading": "そうし",
+    "clan": "宗氏",
+    "color": "#4a7a6a",
+    "homeProvinceId": "tsushima",
+    "stats": {
+      "military": 65,
+      "politics": 82,
+      "charisma": 70
+    },
+    "description": "対馬を支配し、朝鮮との貿易で栄えた。日朝貿易の窓口として重要な役割を果たし、豊臣秀吉の朝鮮出兵でも重要な役割を担った。",
+    "era": "1550年"
+  },
+  {
+    "id": "otomo_sorin",
+    "name": "大友義統",
+    "nameReading": "おおともよしむね",
+    "clan": "大友氏",
+    "color": "#c07a15",
+    "homeProvinceId": "buma",
+    "stats": {
+      "military": 68,
+      "politics": 72,
+      "charisma": 65
+    },
+    "description": "大友宗麟の嫡男。父の死後大友氏を継承したが、島津氏の侵攻により衰退。豊臣秀吉の九州征伐で救われた。",
+    "era": "1585年"
+  },
+  {
+    "id": "arama",
+    "name": "有馬晴信",
+    "nameReading": "ありまはるのぶ",
+    "clan": "有馬氏",
+    "color": "#8a4a2a",
+    "homeProvinceId": "higo",
+    "stats": {
+      "military": 75,
+      "politics": 68,
+      "charisma": 72
+    },
+    "description": "肥後の戦国大名。キリシタン大名として知られ、南蛮文化を受け入れた。島津氏との戦いで苦戦したが、豊臣秀吉の九州征伐で救われた。",
+    "era": "1580年"
+  },
+  {
+    "id": "matsuura",
+    "name": "松浦隆信",
+    "nameReading": "まつらたかのぶ",
+    "clan": "松浦氏",
+    "color": "#5a5a8a",
+    "homeProvinceId": "iki",
+    "stats": {
+      "military": 65,
+      "politics": 75,
+      "charisma": 68
+    },
+    "description": "壱岐を支配した水軍の大名。海上貿易で栄え、朝鮮との関係も維持した。松浦党として知られる水軍勢力の中心人物。",
+    "era": "1550年"
+  },
+  {
+    "id": "kono",
+    "name": "河野通宣",
+    "nameReading": "こうのみちのぶ",
+    "clan": "河野氏",
+    "color": "#4a7a6a",
+    "homeProvinceId": "iyo",
+    "stats": {
+      "military": 70,
+      "politics": 68,
+      "charisma": 72
+    },
+    "description": "伊予の戦国大名。水軍を擁し、瀬戸内海を制圧。毛利氏と結んで大友氏に対抗した。",
+    "era": "1550年"
+  },
+  {
+    "id": "miyoshi_yoshitsugu",
+    "name": "三好義継",
+    "nameReading": "みよしよしつぐ",
+    "clan": "三好氏",
+    "color": "#6a5a8a",
+    "homeProvinceId": "sanuki",
+    "stats": {
+      "military": 68,
+      "politics": 65,
+      "charisma": 70
+    },
+    "description": "讃岐を支配した三好氏の一族。三好長慶の死後、三好政権を継承したが、織田信長の進攻により衰退。",
+    "era": "1565年"
+  },
+  {
+    "id": "hosokawa",
+    "name": "細川藤孝",
+    "nameReading": "ほそかわふじたか",
+    "clan": "細川氏",
+    "color": "#5a6a8a",
+    "homeProvinceId": "awa",
+    "stats": {
+      "military": 75,
+      "politics": 80,
+      "charisma": 78
+    },
+    "description": "阿波を支配した細川氏の当主。足利義昭を奉じて織田信長に協力。明智光秀の親友として知られる。",
+    "era": "1570年"
+  },
+  {
+    "id": "hosokawa_sumimoto",
+    "name": "細川澄元",
+    "nameReading": "ほそかわすみもと",
+    "clan": "細川氏",
+    "color": "#4a5a7a",
+    "homeProvinceId": "awaji",
+    "stats": {
+      "military": 62,
+      "politics": 68,
+      "charisma": 65
+    },
+    "description": "淡路を支配した細川氏の一族。畿内の争乱に関わり、細川政権の一角を担った。",
+    "era": "1500年"
+  },
+  {
+    "id": "akai",
+    "name": "赤井直正",
+    "nameReading": "あかいなおまさ",
+    "clan": "赤井氏",
+    "color": "#8a3a3a",
+    "homeProvinceId": "tanba",
+    "stats": {
+      "military": 82,
+      "politics": 70,
+      "charisma": 75
+    },
+    "description": "丹波の戦国大名。「丹波の赤鬼」の異名を取り、織田信長の丹波平定戦で激しく抵抗した名将。",
+    "era": "1570年"
+  },
+  {
+    "id": "hosokawa_yusai",
+    "name": "細川幽斎",
+    "nameReading": "ほそかわゆうさい",
+    "clan": "細川氏",
+    "color": "#5a6a8a",
+    "homeProvinceId": "tango",
+    "stats": {
+      "military": 78,
+      "politics": 92,
+      "charisma": 85
+    },
+    "description": "丹後の守護大名。古今伝授の達人として知られ、田辺城の戦いで1,500の兵で15,000の敵を凌駕した伝説的な武将。",
+    "era": "1575年"
+  },
+  {
+    "id": "tachibana",
+    "name": "橘氏",
+    "nameReading": "たちばなし",
+    "clan": "橘氏",
+    "color": "#7a6a4a",
+    "homeProvinceId": "wakasa",
+    "stats": {
+      "military": 68,
+      "politics": 70,
+      "charisma": 65
+    },
+    "description": "若狭を支配した橘氏。若狭湾を控え、北陸と近畿の要衝を支配した。",
+    "era": "1550年"
+  },
+  {
+    "id": "ashikaga",
+    "name": "足利義昭",
+    "nameReading": "あしかがよしあき",
+    "clan": "足利氏",
+    "color": "#8a6a4a",
+    "homeProvinceId": "yamashiro",
+    "stats": {
+      "military": 55,
+      "politics": 70,
+      "charisma": 80
+    },
+    "description": "室町幕府第15代将軍。織田信長に奉じて上洛したが、後に信長と対立し追放された。",
+    "era": "1568年"
+  },
+  {
+    "id": "hatakeyama",
+    "name": "畠山高政",
+    "nameReading": "はたけやまたかまさ",
+    "clan": "畠山氏",
+    "color": "#6a5a7a",
+    "homeProvinceId": "kawachi",
+    "stats": {
+      "military": 68,
+      "politics": 65,
+      "charisma": 70
+    },
+    "description": "河内を支配した畠山氏の当主。三好氏に対抗したが、最終的に三好氏に敗北した。",
+    "era": "1550年"
+  },
+  {
+    "id": "hatakeyama_akimasa",
+    "name": "畠山秋政",
+    "nameReading": "はたけやまあきまさ",
+    "clan": "畠山氏",
+    "color": "#5a4a6a",
+    "homeProvinceId": "izumi",
+    "stats": {
+      "military": 65,
+      "politics": 62,
+      "charisma": 68
+    },
+    "description": "和泉を支配した畠山氏の一族。畿内の争乱に関与した。",
+    "era": "1550年"
+  },
+  {
+    "id": "tsutsui",
+    "name": "筒井順昭",
+    "nameReading": "つついじゅんしょう",
+    "clan": "筒井氏",
+    "color": "#5a7a5a",
+    "homeProvinceId": "yamato",
+    "stats": {
+      "military": 72,
+      "politics": 78,
+      "charisma": 75
+    },
+    "description": "大和の戦国大名。筒井城を拠点に大和国を統一。松永久秀と激しく争い、織田信長の協力を得て勝利した。",
+    "era": "1560年"
+  },
+  {
+    "id": "kitabatake",
+    "name": "北畠具房",
+    "nameReading": "きたばたけともふさ",
+    "clan": "北畠氏",
+    "color": "#6a5a5a",
+    "homeProvinceId": "ise",
+    "stats": {
+      "military": 65,
+      "politics": 70,
+      "charisma": 68
+    },
+    "description": "伊勢の守護大名。北畠氏は南朝の後裔で、伊勢国司として君臨した。織田信長に攻められ降伏した。",
+    "era": "1568年"
+  },
+  {
+    "id": "kuki",
+    "name": "九鬼嘉隆",
+    "nameReading": "くきよしたか",
+    "clan": "九鬼氏",
+    "color": "#4a6a7a",
+    "homeProvinceId": "shimo",
+    "stats": {
+      "military": 80,
+      "politics": 68,
+      "charisma": 72
+    },
+    "description": "志摩の水軍の大将。織田信長に仕え、鉄甲船を建造して村上水軍を撃破。海戦の名手として知られる。",
+    "era": "1575年"
+  },
+  {
+    "id": "hattori",
+    "name": "服部半蔵",
+    "nameReading": "はっとりはんぞう",
+    "clan": "服部氏",
+    "color": "#3a4a3a",
+    "homeProvinceId": "iga",
+    "stats": {
+      "military": 85,
+      "politics": 60,
+      "charisma": 70
+    },
+    "description": "伊賀忍者の頭領。徳川家康に仕え、伊賀越えで家康の命を救った。忍術の達人として知られる。",
+    "era": "1582年"
+  },
+  {
+    "id": "saika",
+    "name": "雑賀孫一",
+    "nameReading": "さいかまごいち",
+    "clan": "雑賀氏",
+    "color": "#6a4a4a",
+    "homeProvinceId": "kii",
+    "stats": {
+      "military": 83,
+      "politics": 62,
+      "charisma": 75
+    },
+    "description": "紀州の雑賀衆を率いた鉄砲集団の頭領。雑賀城の戦いで織田信長の大軍を撃退した。",
+    "era": "1570年"
+  },
+  {
+    "id": "ura",
+    "name": "浦上宗景",
+    "nameReading": "うらがみむねかげ",
+    "clan": "浦上氏",
+    "color": "#7a5a4a",
+    "homeProvinceId": "bizen",
+    "stats": {
+      "military": 72,
+      "politics": 68,
+      "charisma": 70
+    },
+    "description": "備前の戦国大名。宇喜多直家に謀殺された悲劇の武将。",
+    "era": "1570年"
+  },
+  {
+    "id": "ukita",
+    "name": "宇喜多直家",
+    "nameReading": "うきたなおいえ",
+    "clan": "宇喜多氏",
+    "color": "#8a5a3a",
+    "homeProvinceId": "bitchu",
+    "stats": {
+      "military": 88,
+      "politics": 90,
+      "charisma": 75
+    },
+    "description": "備中の戦国大名。「謀将」として知られ、主君を謀殺して台頭。豊臣政権の五大老の一人となった。",
+    "era": "1570年"
+  },
+  {
+    "id": "akamatsu",
+    "name": "赤松政秀",
+    "nameReading": "あかまつまさひで",
+    "clan": "赤松氏",
+    "color": "#6a4a3a",
+    "homeProvinceId": "harima",
+    "stats": {
+      "military": 70,
+      "politics": 65,
+      "charisma": 68
+    },
+    "description": "播磨の守護大名。赤松氏は播磨の守護家だったが、浦上氏や宇喜多氏の台頭により衰退した。",
+    "era": "1550年"
+  },
+  {
+    "id": "yamana_tajima",
+    "name": "山名豊国",
+    "nameReading": "やまなとよくに",
+    "clan": "山名氏",
+    "color": "#5a4a5a",
+    "homeProvinceId": "tajima",
+    "stats": {
+      "military": 65,
+      "politics": 62,
+      "charisma": 65
+    },
+    "description": "但馬を支配した山名氏。守護大名として山陰道に勢力を誇ったが、織田信長の進攻により衰退。",
+    "era": "1560年"
+  },
+  {
+    "id": "yamana_inaba",
+    "name": "山名豊国",
+    "nameReading": "やまなとよくに",
+    "clan": "山名氏",
+    "color": "#5a4a5a",
+    "homeProvinceId": "inaba",
+    "stats": {
+      "military": 65,
+      "politics": 62,
+      "charisma": 65
+    },
+    "description": "因幡を支配した山名氏。山陰道の守護大名として知られる。",
+    "era": "1560年"
+  },
+  {
+    "id": "yamanaka",
+    "name": "山中鹿之介",
+    "nameReading": "やまなかしかのすけ",
+    "clan": "尼子氏",
+    "color": "#4a4a6a",
+    "homeProvinceId": "hoki",
+    "stats": {
+      "military": 90,
+      "politics": 70,
+      "charisma": 85
+    },
+    "description": "尼子氏の忠臣。主君尼子義久を奉じて毛利氏と激しく戦った。「難攻不落」の忠義の士として知られる。",
+    "era": "1570年"
+  },
+  {
+    "id": "oki_hiko",
+    "name": "隠岐氏",
+    "nameReading": "おきし",
+    "clan": "隠岐氏",
+    "color": "#4a5a6a",
+    "homeProvinceId": "oki",
+    "stats": {
+      "military": 60,
+      "politics": 65,
+      "charisma": 62
+    },
+    "description": "隠岐諸島を支配した氏族。日本海の要衝を支配し、海運で栄えた。",
+    "era": "1550年"
+  },
+  {
+    "id": "hori",
+    "name": "堀秀政",
+    "nameReading": "ほりひでまさ",
+    "clan": "堀氏",
+    "color": "#5a6a7a",
+    "homeProvinceId": "noto",
+    "stats": {
+      "military": 82,
+      "politics": 88,
+      "charisma": 80
+    },
+    "description": "能登を支配した武将。織田信長の家臣として活躍し、本能寺の変後は豊臣秀吉に仕えた。行政手腕に優れた名臣。",
+    "era": "1580年"
+  },
+  {
+    "id": "jinbo",
+    "name": "神保長職",
+    "nameReading": "じんぼながもと",
+    "clan": "神保氏",
+    "color": "#5a5a6a",
+    "homeProvinceId": "etchu",
+    "stats": {
+      "military": 70,
+      "politics": 65,
+      "charisma": 68
+    },
+    "description": "越中の戦国大名。上杉氏と結んで越後の上杉謙信と協力したが、織田信長の進攻により衰退。",
+    "era": "1560年"
+  },
+  {
+    "id": "hojo_soun",
+    "name": "北条早雲",
+    "nameReading": "ほうじょうそううん",
+    "clan": "北条氏",
+    "color": "#b0a010",
+    "homeProvinceId": "izu",
+    "stats": {
+      "military": 85,
+      "politics": 90,
+      "charisma": 82
+    },
+    "description": "後北条氏の祖。伊豆から関東に進出し、北条氏の基礎を築いた。下克上の典型として知られる。",
+    "era": "1490年"
+  },
+  {
+    "id": "yuki",
+    "name": "結城氏朝",
+    "nameReading": "ゆうきうじとも",
+    "clan": "結城氏",
+    "color": "#6a5a5a",
+    "homeProvinceId": "kozuke",
+    "stats": {
+      "military": 70,
+      "politics": 72,
+      "charisma": 68
+    },
+    "description": "上野の戦国大名。結城氏は下総結城氏の分家で、上野に勢力を誇った。",
+    "era": "1550年"
+  },
+  {
+    "id": "satake_yoshishige",
+    "name": "佐竹義重",
+    "nameReading": "さたけよししげ",
+    "clan": "佐竹氏",
+    "color": "#5a3a7a",
+    "homeProvinceId": "shimotsuke",
+    "stats": {
+      "military": 81,
+      "politics": 78,
+      "charisma": 83
+    },
+    "description": "下野を含む常陸の戦国大名。「鬼義重」の異名を取り、関東管領上杉氏と結んで北条氏に対抗。",
+    "era": "1570年"
+  },
+  {
+    "id": "chiba",
+    "name": "千葉氏",
+    "nameReading": "ちばし",
+    "clan": "千葉氏",
+    "color": "#5a6a5a",
+    "homeProvinceId": "shimosa",
+    "stats": {
+      "military": 65,
+      "politics": 62,
+      "charisma": 68
+    },
+    "description": "下総を支配した千葉氏。平安時代からの名門で、関東の有力氏族として知られた。",
+    "era": "1550年"
+  },
+  {
+    "id": "masaki",
+    "name": "正木氏",
+    "nameReading": "まさきし",
+    "clan": "正木氏",
+    "color": "#6a5a4a",
+    "homeProvinceId": "kazusa",
+    "stats": {
+      "military": 70,
+      "politics": 65,
+      "charisma": 70
+    },
+    "description": "上総を支配した正木氏。里見氏の家臣として活躍し、房総半島を支配した。",
+    "era": "1560年"
+  },
+  {
+    "id": "satomi",
+    "name": "里見義堯",
+    "nameReading": "さとみよしたか",
+    "clan": "里見氏",
+    "color": "#5a4a6a",
+    "homeProvinceId": "awa_kanto",
+    "stats": {
+      "military": 75,
+      "politics": 70,
+      "charisma": 72
+    },
+    "description": "安房を支配した里見氏。房総半島を拠点に北条氏と激しく争った。「房総の虎」の異名を持つ。",
+    "era": "1550年"
+  },
+  {
+    "id": "iwaki_tsunetaka",
+    "name": "岩城常隆",
+    "nameReading": "いわきつねたか",
+    "clan": "岩城氏",
+    "color": "#6a5a5a",
+    "homeProvinceId": "iwaki",
+    "stats": {
+      "military": 68,
+      "politics": 65,
+      "charisma": 70
+    },
+    "description": "磐城を支配した岩城氏。東北の有力氏族で、伊達氏や佐竹氏と関わった。",
+    "era": "1560年"
+  },
+  {
+    "id": "ando",
+    "name": "安東愛季",
+    "nameReading": "あんどうよしすえ",
+    "clan": "安東氏",
+    "color": "#4a5a6a",
+    "homeProvinceId": "u_go",
+    "stats": {
+      "military": 65,
+      "politics": 70,
+      "charisma": 68
+    },
+    "description": "羽後を支配した安東氏。津軽地方を拠点に、蝦夷との交易で栄えた。",
+    "era": "1570年"
+  }
+]

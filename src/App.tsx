@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import StartScreen from './screens/StartScreen';
 import DaimyoSelectScreen from './screens/DaimyoSelectScreen';
 import GameScreen from './screens/GameScreen';
+import MapEditorScreen from './screens/MapEditorScreen';
 import { getDaimyo, DAIMYO_LIST } from './data/gameData';
 import { INITIAL_PARAMS } from './data/retainerData';
 import { createNewSave } from './lib/saveDataDB';
@@ -20,7 +21,8 @@ const theme = createTheme({
 type Screen =
   | { type: 'start' }
   | { type: 'daimyo-select'; slotId: number }
-  | { type: 'game'; save: SaveData };
+  | { type: 'game'; save: SaveData }
+  | { type: 'map-editor' };
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ type: 'start' });
@@ -56,6 +58,7 @@ export default function App() {
         <StartScreen
           onNewGame={(slotId) => setScreen({ type: 'daimyo-select', slotId })}
           onContinue={handleContinue}
+          onOpenMapEditor={() => setScreen({ type: 'map-editor' })}
         />,
       );
     case 'daimyo-select':
@@ -70,6 +73,12 @@ export default function App() {
         <GameScreen
           save={screen.save}
           onReturnToTitle={() => setScreen({ type: 'start' })}
+        />,
+      );
+    case 'map-editor':
+      return wrap(
+        <MapEditorScreen
+          onBack={() => setScreen({ type: 'start' })}
         />,
       );
   }

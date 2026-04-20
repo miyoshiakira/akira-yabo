@@ -1,21 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Button,
   Card,
   CardContent,
   Chip,
-  Fab,
   LinearProgress,
   Tab,
   Tabs,
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import type { Daimyo, Province } from '../data/gameData';
-import { DAIMYO_LIST, PROVINCES, getDaimyo, getProvincesByDaimyo } from '../data/gameData';
+import { DAIMYO_LIST, PROVINCES, getDaimyo, getProvincesByDaimyo, getPolygonPoints } from '../data/gameData';
+import ZoomControls from '../components/ZoomControls';
+import type { VB } from '../components/ZoomControls';
+import { VB_FULL } from '../components/ZoomControls';
 
 interface Props {
   onBack: () => void;
@@ -82,7 +82,7 @@ function ProvincePolygon({
   return (
     <g>
       <polygon
-        points={province.points}
+        points={getPolygonPoints(province)}
         fill={isHovered ? hoverColor : baseColor}
         fillOpacity={fillOpacity}
         stroke={strokeColor}
@@ -115,11 +115,95 @@ function ProvincePolygon({
 export default function DaimyoSelectScreen({ onBack, onStart }: Props) {
   const [hoveredProvinceId, setHoveredProvinceId] = useState<string | null>(null);
   const [selectedDaimyoId, setSelectedDaimyoId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [vb, setVb] = useState<VB>(VB_FULL);
   const [bottomTab, setBottomTab] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasMovedRef = useRef(false);
+  const gestureRef = useRef<{
+    startTouches: { x: number; y: number }[];
+    startVb: VB;
+    display: { left: number; top: number; w: number; h: number };
+  } | null>(null);
 
   const selectedDaimyo = selectedDaimyoId ? getDaimyo(selectedDaimyoId) : null;
   const selectedProvinces = selectedDaimyoId ? getProvincesByDaimyo(selectedDaimyoId) : [];
+
+  const getDisplay = (rect: DOMRect) => {
+    const mapAr = 810 / 930;
+    const containerAr = rect.width / rect.height;
+    let displayW, displayH;
+    if (containerAr > mapAr) {
+      displayH = rect.height;
+      displayW = rect.height * mapAr;
+    } else {
+      displayW = rect.width;
+      displayH = rect.width / mapAr;
+    }
+    return {
+      left: (rect.width - displayW) / 2,
+      top: (rect.height - displayH) / 2,
+      w: displayW,
+      h: displayH,
+    };
+  };
+
+  const toSvg = (sx: number, sy: number, d: ReturnType<typeof getDisplay>, v: VB) => ({
+    x: ((sx - d.left) / d.w) * v.w + v.x,
+    y: ((sy - d.top) / d.h) * v.h + v.y,
+  });
+
+  const clampVb = (x: number, y: number, w: number, h: number): VB => ({
+    x: Math.max(0, Math.min(810 - w, x)),
+    y: Math.max(0, Math.min(930 - h, y)),
+    w, h,
+  });
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    hasMovedRef.current = false;
+    gestureRef.current = {
+      startTouches: Array.from(e.touches).map((t) => ({ x: t.clientX - rect.left, y: t.clientY - rect.top })),
+      startVb: { ...vb },
+      display: getDisplay(rect),
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!gestureRef.current) return;
+    const { startTouches, startVb, display } = gestureRef.current;
+    const containerRect = containerRef.current!.getBoundingClientRect();
+    const cur = Array.from(e.touches).map((t) => ({ x: t.clientX - containerRect.left, y: t.clientY - containerRect.top }));
+
+    if (cur.length === 1 && startTouches.length === 1) {
+      const dx = cur[0].x - startTouches[0].x;
+      const dy = cur[0].y - startTouches[0].y;
+      if (Math.hypot(dx, dy) > 5) hasMovedRef.current = true;
+      if (startVb.w >= 810 * 0.99) return;
+      const svgDx = (dx / display.w) * startVb.w;
+      const svgDy = (dy / display.h) * startVb.h;
+      setVb(clampVb(startVb.x - svgDx, startVb.y - svgDy, startVb.w, startVb.h));
+    } else if (cur.length >= 2 && startTouches.length >= 2) {
+      hasMovedRef.current = true;
+      const sd = Math.hypot(startTouches[1].x - startTouches[0].x, startTouches[1].y - startTouches[0].y);
+      const cd = Math.hypot(cur[1].x - cur[0].x, cur[1].y - cur[0].y);
+      if (sd === 0) return;
+      const factor = cd / sd;
+      const newW = Math.max(810 / 5, Math.min(810, startVb.w / factor));
+      const newH = newW * (930 / 810);
+      const center = toSvg((startTouches[0].x + startTouches[1].x) / 2, (startTouches[0].y + startTouches[1].y) / 2, display, startVb);
+      const curCenter = toSvg((cur[0].x + cur[1].x) / 2, (cur[0].y + cur[1].y) / 2, display, startVb);
+      const shiftX = center.x - curCenter.x;
+      const shiftY = center.y - curCenter.y;
+      const cx = startVb.x + startVb.w / 2 - shiftX;
+      const cy = startVb.y + startVb.h / 2 - shiftY;
+      setVb(clampVb(cx - newW / 2, cy - newH / 2, newW, newH));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    gestureRef.current = null;
+  };
 
   const handleProvinceClick = (province: Province) => {
     const daimyo = getDaimyo(province.daimyoId);
@@ -133,9 +217,6 @@ export default function DaimyoSelectScreen({ onBack, onStart }: Props) {
     setSelectedDaimyoId(daimyo.id);
     setBottomTab(0);
   };
-
-  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 2.5));
-  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.6));
 
   return (
     <Box
@@ -179,6 +260,7 @@ export default function DaimyoSelectScreen({ onBack, onStart }: Props) {
 
       {/* マップエリア */}
       <Box
+        ref={containerRef}
         sx={{
           flex: '0 0 45%',
           overflow: 'hidden',
@@ -187,29 +269,24 @@ export default function DaimyoSelectScreen({ onBack, onStart }: Props) {
           alignItems: 'center',
           justifyContent: 'center',
           background: OCEAN_COLOR,
+          touchAction: 'none',
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <svg
-          viewBox="0 0 700 950"
-          style={{
-            height: '100%',
-            width: 'auto',
-            display: 'block',
-            maxHeight: '100%',
-            transform: `scale(${zoom})`,
-            transformOrigin: 'center center',
-            transition: 'transform 0.2s ease-out',
-            touchAction: 'none',
-          }}
+          viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+          style={{ width: '100%', height: '100%', display: 'block' }}
           preserveAspectRatio="xMidYMid meet"
         >
-          <rect x="0" y="0" width="700" height="950" fill={OCEAN_COLOR} />
+          <rect x="0" y="0" width="810" height="930" fill={OCEAN_COLOR} />
 
           {[175, 350, 525, 700].map((x) => (
-            <line key={`vl${x}`} x1={x} y1="0" x2={x} y2="950" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+            <line key={`vl${x}`} x1={x} y1="0" x2={x} y2="930" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           ))}
-          {[237, 475, 712, 950].map((y) => (
-            <line key={`hl${y}`} x1="0" y1={y} x2="700" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+          {[237, 475, 712, 930].map((y) => (
+            <line key={`hl${y}`} x1="0" y1={y} x2="810" y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
           ))}
 
           {PROVINCES.map((province) => {
@@ -234,25 +311,7 @@ export default function DaimyoSelectScreen({ onBack, onStart }: Props) {
           <text x="30" y="900" fontSize="11" fill="rgba(255,255,255,0.3)" fontFamily="serif">南</text>
         </svg>
 
-        {/* ズームコントロール */}
-        <Box sx={{ position: 'absolute', bottom: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 0.5, zIndex: 10 }}>
-          <Fab
-            size="small"
-            onClick={handleZoomIn}
-            disabled={zoom >= 2.5}
-            sx={{ bgcolor: '#2a4a6a', color: '#88aacc', '&:hover': { bgcolor: '#3a5a7a' }, '&:disabled': { bgcolor: '#1a2a3a', color: '#334' }, width: 36, height: 36, minHeight: 36 }}
-          >
-            <ZoomInIcon sx={{ fontSize: '1.1rem' }} />
-          </Fab>
-          <Fab
-            size="small"
-            onClick={handleZoomOut}
-            disabled={zoom <= 0.6}
-            sx={{ bgcolor: '#2a4a6a', color: '#88aacc', '&:hover': { bgcolor: '#3a5a7a' }, '&:disabled': { bgcolor: '#1a2a3a', color: '#334' }, width: 36, height: 36, minHeight: 36 }}
-          >
-            <ZoomOutIcon sx={{ fontSize: '1.1rem' }} />
-          </Fab>
-        </Box>
+        <ZoomControls vb={vb} onVbChange={setVb} />
       </Box>
 
       {/* 下段パネル */}

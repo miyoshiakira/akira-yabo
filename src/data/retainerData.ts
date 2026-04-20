@@ -10,6 +10,23 @@ export interface Retainer {
   };
 }
 
+export interface RecruitedRetainerData {
+  id: string;
+  name: string;
+  nameReading: string;
+  originalDaimyoId: string;
+  stats: { command: number; intelligence: number; loyalty: number };
+}
+
+export interface MyPrisonerData {
+  id: string;
+  name: string;
+  nameReading: string;
+  stats: { command: number; intelligence: number; loyalty: number };
+  capturedByDaimyoId: string;
+  turnsLeft: number;
+}
+
 export interface DaimyoInitialParams {
   year: number;
   month: number;
