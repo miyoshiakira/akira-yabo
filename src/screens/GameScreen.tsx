@@ -79,7 +79,7 @@ interface InternalAction {
 }
 
 // 武将数・領地数を考慮してアクションを生成
-function buildInternalActions(retainerCount: number, provinceCount: number): InternalAction[] {
+function buildInternalActions(retainerCount: number, provinceCount: number, retainerIds: string[]): InternalAction[] {
   // 武将ボーナス：武将1人につき効率5%UP（最大50%）
   const rBonus = 1 + Math.min(0.5, retainerCount * 0.05);
   // 領地ボーナス：領地1つにつきコスト3%軽減（最大30%）
@@ -178,7 +178,7 @@ function buildInternalActions(retainerCount: number, provinceCount: number): Int
       canExecute: (s) => s.gold >= Math.floor(150 * pDiscount) && retainerCount > 0,
       execute: (s) => {
         const updatedExp = [...s.retainerExp];
-        const allIds = [...new Set([...updatedExp.map(e => e.retainerId)])];
+        const allIds = retainerIds;
         // 全武将にランダム経験値付与
         for (const rid of allIds) {
           const idx = updatedExp.findIndex(e => e.retainerId === rid);
@@ -598,8 +598,8 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
 
   // 武将数・領地数に応じて内政アクションを動的に生成
   const internalActions = useMemo(
-    () => buildInternalActions(allRetainers.length, state.ownedProvinces.length),
-    [allRetainers.length, state.ownedProvinces.length],
+    () => buildInternalActions(allRetainers.length, state.ownedProvinces.length, allRetainers.map(r => r.id)),
+    [allRetainers.length, state.ownedProvinces.length, allRetainers],
   );
 
   const prisonerIds = useMemo(() => new Set(state.myPrisoners.map((p) => p.id)), [state.myPrisoners]);
