@@ -167,6 +167,35 @@ function buildInternalActions(retainerCount: number, provinceCount: number): Int
       execute: (s) => ({ gold: s.gold + Math.floor(tradeGoldBase + s.population / 200), food: s.food + tradeFoodBase }),
       buildLog: (s) => `貿易 → 金+${Math.floor(tradeGoldBase + s.population / 200)}、兵糧+${tradeFoodBase}`,
     },
+    {
+      id: 'training',
+      name: '鍛錬',
+      icon: '🏋',
+      costLabel: `金 −${Math.floor(150 * pDiscount)}`,
+      effectLabel: `全武将の経験値 +${Math.floor(30 * rBonus)}〜${Math.floor(80 * rBonus)}`,
+      color: '#8050a0',
+      description: `武将を鍛え、経験値を獲得させる。武将数が多いほど個人の成長にばらつきが出る。${retainerCount > 0 ? `武将${retainerCount}名の切磋琢磨で鍛錬効率+${Math.floor((rBonus - 1) * 100)}%。` : '武将がいないと効果がない。'}${provinceCount > 1 ? `領地${provinceCount}国の道場で経費${Math.floor((1 - pDiscount) * 100)}%削減。` : ''}`,
+      canExecute: (s) => s.gold >= Math.floor(150 * pDiscount) && retainerCount > 0,
+      execute: (s) => {
+        const updatedExp = [...s.retainerExp];
+        const allIds = [...new Set([...updatedExp.map(e => e.retainerId)])];
+        // 全武将にランダム経験値付与
+        for (const rid of allIds) {
+          const idx = updatedExp.findIndex(e => e.retainerId === rid);
+          const gain = Math.floor((30 + Math.random() * 50) * rBonus);
+          if (idx >= 0) {
+            updatedExp[idx] = { ...updatedExp[idx], exp: updatedExp[idx].exp + gain };
+          } else {
+            updatedExp.push({ retainerId: rid, exp: gain });
+          }
+        }
+        return { gold: s.gold - Math.floor(150 * pDiscount), retainerExp: updatedExp };
+      },
+      buildLog: (_s) => {
+        const gain = Math.floor((30 + Math.random() * 50) * rBonus);
+        return `鍛錬 → 全武将の経験値+${gain}前後、金-${Math.floor(150 * pDiscount)}`;
+      },
+    },
   ];
 }
 
