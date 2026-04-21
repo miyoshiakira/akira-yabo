@@ -888,9 +888,9 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
       if (executed.length > 0) addLog(`処断: ${executed.map(c => c.retainer.name).join('・')}`, newState);
       const released = outcome.capturedRetainers.filter(c => c.decision === 'release');
       if (released.length > 0) addLog(`釈放: ${released.map(c => c.retainer.name).join('・')}`, newState);
-      // 大名滅亡チェック（provinceOwnershipベース）
-      const eDaimyoId = newState.provinceOwnership[target.id] ?? target.daimyoId;
-      const eProvs = PROVINCES.filter(p => getProvinceOwner(p.id, newState.provinceOwnership) === eDaimyoId);
+      // 大名滅亡チェック（provinceOwnership更新前の元の支配者を使用）
+      const eDaimyoId = state.provinceOwnership[target.id] ?? target.daimyoId;
+      const eProvs = PROVINCES.filter(p => getProvinceOwner(p.id, state.provinceOwnership) === eDaimyoId);
       if (eProvs.length > 0 && eProvs.every(p => newState.ownedProvinces.includes(p.id))) {
         addLog(`【滅亡】${getDaimyo(eDaimyoId)?.name ?? eDaimyoId}は滅亡した！`, newState);
         // 滅亡した大名の蓄積データを削除

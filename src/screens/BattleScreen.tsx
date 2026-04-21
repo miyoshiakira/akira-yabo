@@ -77,7 +77,9 @@ export default function BattleScreen({
   const pDaimyo = getDaimyo(playerDaimyoId)!;
   const tProvince = getProvince(targetProvinceId)!;
   // provinceOwnershipから現在の支配大名を取得（AI間戦争で変更されている可能性）
-  const eDaimyoId = provinceOwnership[targetProvinceId] ?? tProvince.daimyoId;
+  // プレイヤー領地の場合はプレイヤーIDが入っているので、その場合は元のdaimyoIdを使う
+  const ownerInMap = provinceOwnership[targetProvinceId];
+  const eDaimyoId = (ownerInMap && ownerInMap !== playerDaimyoId) ? ownerInMap : tProvince.daimyoId;
   const eDaimyo = getDaimyo(eDaimyoId);
   const recIds = useMemo(() => new Set(recruitedRetainers.map(r => r.id)), [recruitedRetainers]);
   const eRetainers = useMemo(() => getRetainersByDaimyo(eDaimyoId).filter(r => !recIds.has(r.id)), [eDaimyoId, recIds]);

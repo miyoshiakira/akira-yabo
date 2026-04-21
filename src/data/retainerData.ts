@@ -163,6 +163,196 @@ export const RETAINERS: Retainer[] = [
   { id: 'isono_kazumasa',    name: '磯野員昌',   nameReading: 'いそのかずまさ',   daimyoId: 'azai', stats: { command: 80, intelligence: 68, loyalty: 88 } },
   { id: 'kaihoku_tsunachika', name: '海北綱親',  nameReading: 'かいほくつなちか', daimyoId: 'azai', stats: { command: 74, intelligence: 75, loyalty: 90 } },
   { id: 'amenomori_yahei',   name: '雨森弥兵衛', nameReading: 'あめのもりやへい', daimyoId: 'azai', stats: { command: 70, intelligence: 72, loyalty: 85 } },
+
+  // 龍造寺隆信
+  { id: 'nabeshima_naoshige', name: '鍋島直茂', nameReading: 'なべしまなおしげ', daimyoId: 'ryuzoji', stats: { command: 86, intelligence: 82, loyalty: 90 } },
+  { id: 'hyakutake_tomokane', name: '百武賢兼', nameReading: 'ひゃくたけともかね', daimyoId: 'ryuzoji', stats: { command: 78, intelligence: 70, loyalty: 88 } },
+  { id: 'narimatsu_nobukatsu', name: '成松信勝', nameReading: 'なりまつのぶかつ', daimyoId: 'ryuzoji', stats: { command: 76, intelligence: 68, loyalty: 85 } },
+
+  // 尼子晴久
+  { id: 'uyama_hisakane', name: '宇山久兼', nameReading: 'うやまひさかね', daimyoId: 'amako', stats: { command: 78, intelligence: 75, loyalty: 88 } },
+  { id: 'sase_kiyomune', name: '佐世清宗', nameReading: 'させきよむね', daimyoId: 'amako', stats: { command: 72, intelligence: 78, loyalty: 82 } },
+  { id: 'kumagai_nobunao', name: '熊谷信直', nameReading: 'くまがいのぶなお', daimyoId: 'amako', stats: { command: 74, intelligence: 70, loyalty: 85 } },
+
+  // 徳川家康
+  { id: 'honda_tadakatsu', name: '本多忠勝', nameReading: 'ほんだただかつ', daimyoId: 'tokugawa', stats: { command: 95, intelligence: 72, loyalty: 98 } },
+  { id: 'sakai_tadatsugu', name: '酒井忠次', nameReading: 'さかいただつぐ', daimyoId: 'tokugawa', stats: { command: 82, intelligence: 78, loyalty: 95 } },
+  { id: 'ii_naomasa', name: '井伊直政', nameReading: 'いいなおまさ', daimyoId: 'tokugawa', stats: { command: 88, intelligence: 75, loyalty: 92 } },
+
+  // 朝倉義景
+  { id: 'asakura_kagetsura', name: '朝倉景健', nameReading: 'あさくらかげつら', daimyoId: 'asakura', stats: { command: 76, intelligence: 72, loyalty: 80 } },
+  { id: 'uozumi_kagetsugu', name: '魚住景固', nameReading: 'うおずみかげつぐ', daimyoId: 'asakura', stats: { command: 72, intelligence: 68, loyalty: 75 } },
+  { id: 'maeba_yoshitsugu', name: '前波吉継', nameReading: 'まえばよしつぐ', daimyoId: 'asakura', stats: { command: 70, intelligence: 75, loyalty: 72 } },
+
+  // 最上義光
+  { id: 'sakehide_hidetsuna', name: '鮭延秀綱', nameReading: 'さけのべひでつな', daimyoId: 'mogami', stats: { command: 80, intelligence: 72, loyalty: 90 } },
+  { id: 'shimura_mitsuyasu', name: '志村光安', nameReading: 'しむらみつやす', daimyoId: 'mogami', stats: { command: 74, intelligence: 70, loyalty: 88 } },
+  { id: 'iida_harima', name: '飯田播磨', nameReading: 'いいだはりま', daimyoId: 'mogami', stats: { command: 70, intelligence: 68, loyalty: 85 } },
+
+  // 佐竹義重
+  { id: 'satake_yoshitoshi', name: '佐竹義斯', nameReading: 'さたけよしとし', daimyoId: 'satake', stats: { command: 75, intelligence: 72, loyalty: 88 } },
+  { id: 'koba_yoshizumi', name: '小場義実', nameReading: 'こばよしざね', daimyoId: 'satake', stats: { command: 72, intelligence: 70, loyalty: 85 } },
+  { id: 'okamoto_akihiro', name: '岡本顕逸', nameReading: 'おかもとあきひろ', daimyoId: 'satake', stats: { command: 68, intelligence: 75, loyalty: 82 } },
+
+  // 南部晴政
+  { id: 'nanbu_nobunao', name: '南部信直', nameReading: 'なんぶのぶなお', daimyoId: 'nanbu', stats: { command: 72, intelligence: 75, loyalty: 80 } },
+  { id: 'kasuya_myojo', name: '柏山明助', nameReading: 'かしやまみょうじょ', daimyoId: 'nanbu', stats: { command: 68, intelligence: 68, loyalty: 82 } },
+  { id: 'kita_nobuchika', name: '北信愛', nameReading: 'きたのぶちか', daimyoId: 'nanbu', stats: { command: 70, intelligence: 72, loyalty: 85 } },
+
+  // 本願寺顕如
+  { id: 'shimotsuma_ranryo', name: '下間頼廉', nameReading: 'しもつまらいれん', daimyoId: 'honganji', stats: { command: 78, intelligence: 82, loyalty: 95 } },
+  { id: 'shimotsuma_rairyu', name: '下間頼龍', nameReading: 'しもつまらいりゅう', daimyoId: 'honganji', stats: { command: 72, intelligence: 78, loyalty: 90 } },
+  { id: 'kenshoji_shoe', name: '願証寺証恵', nameReading: 'けんしょうじしょうえ', daimyoId: 'honganji', stats: { command: 68, intelligence: 80, loyalty: 92 } },
+
+  // 三好長慶
+  { id: 'miyoshi_nagayasu', name: '三好長逸', nameReading: 'みよしながやす', daimyoId: 'miyoshi', stats: { command: 75, intelligence: 72, loyalty: 78 } },
+  { id: 'miyoshi_masayasu', name: '三好政康', nameReading: 'みよしますやす', daimyoId: 'miyoshi', stats: { command: 78, intelligence: 70, loyalty: 75 } },
+  { id: 'iwanari_tomomichi', name: '岩成友通', nameReading: 'いわなりともみち', daimyoId: 'miyoshi', stats: { command: 74, intelligence: 75, loyalty: 78 } },
+
+  // 宗氏
+  { id: 'so_yoshitoki', name: '宗義智', nameReading: 'そうよしとし', daimyoId: 'so', stats: { command: 65, intelligence: 78, loyalty: 85 } },
+  { id: 'so_shogen', name: '宗将監', nameReading: 'そうしょうげん', daimyoId: 'so', stats: { command: 62, intelligence: 72, loyalty: 80 } },
+
+  // 大友義統
+  { id: 'tawara_chikakata', name: '田原親賢', nameReading: 'たわらちかかた', daimyoId: 'otomo_sorin', stats: { command: 65, intelligence: 70, loyalty: 78 } },
+  { id: 'yoshihiro_toyokuni', name: '吉弘統幸', nameReading: 'よしひろとよくに', daimyoId: 'otomo_sorin', stats: { command: 72, intelligence: 68, loyalty: 82 } },
+
+  // 有馬晴信
+  { id: 'arima_yoshisada', name: '有馬義貞', nameReading: 'ありまよしさだ', daimyoId: 'arama', stats: { command: 68, intelligence: 65, loyalty: 80 } },
+  { id: 'fukabori_kiyokata', name: '深堀純賢', nameReading: 'ふかぼりすみかた', daimyoId: 'arama', stats: { command: 65, intelligence: 62, loyalty: 78 } },
+
+  // 松浦隆信
+  { id: 'matsuura_shizuharu', name: '松浦鎮', nameReading: 'まつらしずはる', daimyoId: 'matsuura', stats: { command: 62, intelligence: 68, loyalty: 80 } },
+  { id: 'hata_chikashige', name: '波多親重', nameReading: 'はたちかしげ', daimyoId: 'matsuura', stats: { command: 60, intelligence: 65, loyalty: 78 } },
+
+  // 河野通宣
+  { id: 'kono_mitsunao', name: '河野通直', nameReading: 'こうのみつなお', daimyoId: 'kono', stats: { command: 65, intelligence: 68, loyalty: 80 } },
+  { id: 'kutsuna_michiakira', name: '忽那通著', nameReading: 'くつなみちあきら', daimyoId: 'kono', stats: { command: 68, intelligence: 65, loyalty: 82 } },
+
+  // 三好義継
+  { id: 'shinohara_nagafusa', name: '篠原長房', nameReading: 'しのはらながふさ', daimyoId: 'miyoshi_yoshitsugu', stats: { command: 72, intelligence: 78, loyalty: 75 } },
+  { id: 'miyoshi_masakatsu', name: '三好政勝', nameReading: 'みよしますかつ', daimyoId: 'miyoshi_yoshitsugu', stats: { command: 68, intelligence: 70, loyalty: 72 } },
+
+  // 細川藤孝
+  { id: 'hosokawa_tadaoki', name: '細川忠興', nameReading: 'ほそかわただおき', daimyoId: 'hosokawa', stats: { command: 80, intelligence: 82, loyalty: 88 } },
+  { id: 'ogasawara_hidekiyo', name: '小笠原秀清', nameReading: 'おがさわらひできよ', daimyoId: 'hosokawa', stats: { command: 72, intelligence: 70, loyalty: 85 } },
+
+  // 細川澄元
+  { id: 'miyoshi_yukinaga', name: '三好之長', nameReading: 'みよしゆきなが', daimyoId: 'hosokawa_sumimoto', stats: { command: 72, intelligence: 68, loyalty: 78 } },
+  { id: 'hosokawa_masaharu', name: '細川政春', nameReading: 'ほそかわまさはる', daimyoId: 'hosokawa_sumimoto', stats: { command: 65, intelligence: 65, loyalty: 75 } },
+
+  // 赤井直正
+  { id: 'akai_tadaiye', name: '赤井忠家', nameReading: 'あかいただいえ', daimyoId: 'akai', stats: { command: 72, intelligence: 65, loyalty: 82 } },
+  { id: 'ogino_naomasa_akai', name: '荻野直正', nameReading: 'おぎのなおまさ', daimyoId: 'akai', stats: { command: 75, intelligence: 68, loyalty: 80 } },
+
+  // 細川幽斎
+  { id: 'mukai_masatsuna', name: '向井正綱', nameReading: 'むかいまさつな', daimyoId: 'hosokawa_yusai', stats: { command: 72, intelligence: 78, loyalty: 88 } },
+  { id: 'nagaoka_tadayuki', name: '長岡忠征', nameReading: 'ながおかただゆき', daimyoId: 'hosokawa_yusai', stats: { command: 68, intelligence: 80, loyalty: 90 } },
+
+  // 橘氏（若狭）
+  { id: 'takeda_nobutaka_wakasa', name: '武田信豊', nameReading: 'たけだのぶとよ', daimyoId: 'tachibana', stats: { command: 68, intelligence: 72, loyalty: 75 } },
+  { id: 'kumagai_naotsugu', name: '熊谷直続', nameReading: 'くまがいなおつぐ', daimyoId: 'tachibana', stats: { command: 62, intelligence: 65, loyalty: 72 } },
+
+  // 足利義昭
+  { id: 'ishiko_fujinaga', name: '一色藤長', nameReading: 'いっしきふじなが', daimyoId: 'ashikaga', stats: { command: 62, intelligence: 75, loyalty: 82 } },
+  { id: 'fujita_yukimasa', name: '藤田行政', nameReading: 'ふじたゆきまさ', daimyoId: 'ashikaga', stats: { command: 58, intelligence: 68, loyalty: 78 } },
+
+  // 畠山高政
+  { id: 'yusa_nobunori', name: '遊佐信教', nameReading: 'ゆさのぶのり', daimyoId: 'hatakeyama', stats: { command: 70, intelligence: 72, loyalty: 72 } },
+  { id: 'yukawa_naomitsu', name: '湯川直光', nameReading: 'ゆかわなおみつ', daimyoId: 'hatakeyama', stats: { command: 65, intelligence: 68, loyalty: 70 } },
+
+  // 畠山秋政
+  { id: 'nonomura_yamato', name: '野々村大和守', nameReading: 'ののむらやまとのかみ', daimyoId: 'hatakeyama_akimasa', stats: { command: 62, intelligence: 65, loyalty: 72 } },
+  { id: 'hatakeyama_masakuni', name: '畠山政国', nameReading: 'はたけやままさくに', daimyoId: 'hatakeyama_akimasa', stats: { command: 58, intelligence: 60, loyalty: 68 } },
+
+  // 筒井順昭
+  { id: 'tsutsui_junkei', name: '筒井順慶', nameReading: 'つついじゅんけい', daimyoId: 'tsutsui', stats: { command: 75, intelligence: 82, loyalty: 80 } },
+  { id: 'shima_katsuhiro', name: '島勝猛', nameReading: 'しまかつたけ', daimyoId: 'tsutsui', stats: { command: 78, intelligence: 70, loyalty: 78 } },
+
+  // 北畠具房
+  { id: 'kitabatake_tomomichi', name: '北畠具教', nameReading: 'きたばたけとものり', daimyoId: 'kitabatake', stats: { command: 72, intelligence: 78, loyalty: 85 } },
+  { id: 'kizuki_tomoyasu', name: '木造具康', nameReading: 'きぞくりともやす', daimyoId: 'kitabatake', stats: { command: 65, intelligence: 70, loyalty: 80 } },
+
+  // 九鬼嘉隆
+  { id: 'kuki_moritaka', name: '九鬼守隆', nameReading: 'くきもりたか', daimyoId: 'kuki', stats: { command: 75, intelligence: 72, loyalty: 88 } },
+  { id: 'chigachi_shigenobu', name: '千賀地重信', nameReading: 'ちがちしげのぶ', daimyoId: 'kuki', stats: { command: 68, intelligence: 65, loyalty: 82 } },
+
+  // 服部半蔵
+  { id: 'hattori_masashige', name: '服部正重', nameReading: 'はっとりまさしげ', daimyoId: 'hattori', stats: { command: 78, intelligence: 72, loyalty: 88 } },
+  { id: 'fujibayashi_yasutaka', name: '藤林保豊', nameReading: 'ふじばやしやすとよ', daimyoId: 'hattori', stats: { command: 72, intelligence: 80, loyalty: 82 } },
+
+  // 雑賀孫一
+  { id: 'dobashi_heiji', name: '土橋平次', nameReading: 'どばしへいじ', daimyoId: 'saika', stats: { command: 72, intelligence: 68, loyalty: 78 } },
+  { id: 'saika_sanpei', name: '雑賀三平', nameReading: 'さいかさんぺい', daimyoId: 'saika', stats: { command: 68, intelligence: 65, loyalty: 75 } },
+
+  // 浦上宗景
+  { id: 'akashi_yukiaki', name: '明石行雄', nameReading: 'あかしゆきお', daimyoId: 'ura', stats: { command: 68, intelligence: 72, loyalty: 72 } },
+  { id: 'nagafune_sadachika', name: '長船貞親', nameReading: 'ながふねさだちか', daimyoId: 'ura', stats: { command: 65, intelligence: 68, loyalty: 70 } },
+
+  // 宇喜多直家
+  { id: 'ukita_hideie', name: '宇喜多秀家', nameReading: 'うきたひでいえ', daimyoId: 'ukita', stats: { command: 78, intelligence: 75, loyalty: 85 } },
+  { id: 'togawa_achiyasu', name: '戸川達安', nameReading: 'とかわたつやす', daimyoId: 'ukita', stats: { command: 75, intelligence: 70, loyalty: 82 } },
+  { id: 'oka_toshitada', name: '岡利忠', nameReading: 'おかとしただ', daimyoId: 'ukita', stats: { command: 72, intelligence: 68, loyalty: 80 } },
+
+  // 赤松政秀
+  { id: 'akamatsu_norifusa', name: '赤松則房', nameReading: 'あかまつのりふさ', daimyoId: 'akamatsu', stats: { command: 65, intelligence: 62, loyalty: 75 } },
+  { id: 'kodera_narisue', name: '小寺則職', nameReading: 'こでらなりのり', daimyoId: 'akamatsu', stats: { command: 62, intelligence: 65, loyalty: 72 } },
+
+  // 山名豊国（但馬）
+  { id: 'yamana_suketoyo', name: '山名祐豊', nameReading: 'やまやすけとよ', daimyoId: 'yamana_tajima', stats: { command: 62, intelligence: 65, loyalty: 72 } },
+  { id: 'kikkawa_michiyasu', name: '吉川経安', nameReading: 'きっかわみちやす', daimyoId: 'yamana_tajima', stats: { command: 58, intelligence: 60, loyalty: 70 } },
+
+  // 山名豊国（因幡）
+  { id: 'yamana_toyohiro', name: '山名豊弘', nameReading: 'やまなとよひろ', daimyoId: 'yamana_inaba', stats: { command: 60, intelligence: 62, loyalty: 70 } },
+  { id: 'kakiya_mitsunari', name: '垣屋光成', nameReading: 'かきやみつなり', daimyoId: 'yamana_inaba', stats: { command: 58, intelligence: 60, loyalty: 68 } },
+
+  // 山中鹿之介
+  { id: 'tatehara_hisatsuna', name: '立原久綱', nameReading: 'たてはらひさつな', daimyoId: 'yamanaka', stats: { command: 75, intelligence: 72, loyalty: 92 } },
+  { id: 'sugihara_morishige', name: '杉原盛重', nameReading: 'すぎはらもりしげ', daimyoId: 'yamanaka', stats: { command: 70, intelligence: 68, loyalty: 88 } },
+
+  // 隠岐氏
+  { id: 'oki_kiyozane', name: '隠岐清実', nameReading: 'おききよざね', daimyoId: 'oki_hiko', stats: { command: 55, intelligence: 60, loyalty: 72 } },
+  { id: 'oki_tamekiyo', name: '隠岐為清', nameReading: 'おきためきよ', daimyoId: 'oki_hiko', stats: { command: 52, intelligence: 58, loyalty: 70 } },
+
+  // 堀秀政
+  { id: 'hori_hideharu', name: '堀秀治', nameReading: 'ほりひではる', daimyoId: 'hori', stats: { command: 72, intelligence: 75, loyalty: 82 } },
+  { id: 'aoyama_tadanari', name: '青山忠成', nameReading: 'あおやまただなり', daimyoId: 'hori', stats: { command: 68, intelligence: 70, loyalty: 80 } },
+
+  // 神保長職
+  { id: 'jinbo_nagashige', name: '神保長城', nameReading: 'じんぼながしげ', daimyoId: 'jinbo', stats: { command: 65, intelligence: 62, loyalty: 75 } },
+  { id: 'kojima_motoshige', name: '小島職鎮', nameReading: 'こじまもとしげ', daimyoId: 'jinbo', stats: { command: 62, intelligence: 60, loyalty: 72 } },
+
+  // 北条早雲
+  { id: 'hojo_ujitsuna', name: '北条氏綱', nameReading: 'ほうじょううじつな', daimyoId: 'hojo_soun', stats: { command: 82, intelligence: 85, loyalty: 92 } },
+  { id: 'omori_ujiyori', name: '大森氏頼', nameReading: 'おおもりうじより', daimyoId: 'hojo_soun', stats: { command: 72, intelligence: 70, loyalty: 85 } },
+
+  // 結城氏朝
+  { id: 'yuki_masakatsu', name: '結城政勝', nameReading: 'ゆうきまさかつ', daimyoId: 'yuki', stats: { command: 65, intelligence: 68, loyalty: 78 } },
+  { id: 'mizuya_masamura', name: '水谷正村', nameReading: 'みずやまさむら', daimyoId: 'yuki', stats: { command: 62, intelligence: 62, loyalty: 75 } },
+
+  // 佐竹義重（下野）
+  { id: 'satake_yoshikage', name: '佐竹義廉', nameReading: 'さたけよしかど', daimyoId: 'satake_yoshishige', stats: { command: 72, intelligence: 70, loyalty: 85 } },
+  { id: 'okamoto_yoshikatsu', name: '岡本義勝', nameReading: 'おかもとよしかつ', daimyoId: 'satake_yoshishige', stats: { command: 68, intelligence: 68, loyalty: 82 } },
+
+  // 千葉氏
+  { id: 'chiba_tanetomi', name: '千葉胤富', nameReading: 'ちばたねとみ', daimyoId: 'chiba', stats: { command: 62, intelligence: 60, loyalty: 72 } },
+  { id: 'hara_tanesada', name: '原胤貞', nameReading: 'はらたねさだ', daimyoId: 'chiba', stats: { command: 58, intelligence: 58, loyalty: 70 } },
+
+  // 正木氏
+  { id: 'masaki_yoritada', name: '正木頼忠', nameReading: 'まさきよりただ', daimyoId: 'masaki', stats: { command: 65, intelligence: 62, loyalty: 78 } },
+  { id: 'masaki_tokushige', name: '正木時茂', nameReading: 'まさきときしげ', daimyoId: 'masaki', stats: { command: 68, intelligence: 60, loyalty: 75 } },
+
+  // 里見義堯
+  { id: 'satomi_yoshihiro', name: '里見義弘', nameReading: 'さとみよしひろ', daimyoId: 'satomi', stats: { command: 72, intelligence: 68, loyalty: 85 } },
+  { id: 'ansai_sanemoto', name: '安西実元', nameReading: 'あんざいさねもと', daimyoId: 'satomi', stats: { command: 68, intelligence: 65, loyalty: 82 } },
+
+  // 岩城常隆
+  { id: 'iwaki_shigetaka', name: '岩城重隆', nameReading: 'いわきしげたか', daimyoId: 'iwaki_tsunetaka', stats: { command: 62, intelligence: 60, loyalty: 75 } },
+  { id: 'kusano_tamekiyo', name: '草野為清', nameReading: 'くさのためきよ', daimyoId: 'iwaki_tsunetaka', stats: { command: 58, intelligence: 58, loyalty: 72 } },
+
+  // 安東愛季
+  { id: 'ando_sanesue', name: '安東実季', nameReading: 'あんどうさねすえ', daimyoId: 'ando', stats: { command: 62, intelligence: 68, loyalty: 78 } },
+  { id: 'minato_nobuchika', name: '湊信愛', nameReading: 'みなとのぶちか', daimyoId: 'ando', stats: { command: 58, intelligence: 62, loyalty: 72 } },
 ];
 
 export const INITIAL_PARAMS: Record<string, DaimyoInitialParams> = {
