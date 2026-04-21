@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, TextField, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
+import CloseIcon from '@mui/icons-material/Close';
 import { PROVINCES, getPolygonPoints } from '../data/gameData';
 import ZoomControls from '../components/ZoomControls';
 import type { VB } from '../components/ZoomControls';
@@ -44,10 +45,14 @@ export default function MapEditorScreen({ onBack }: Props) {
   const [vb, setVb] = useState<VB>(VB_FULL);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selectedProvince = provinces.find(p => p.id === selectedId) ?? null;
 
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     setDraggingId(id);
+    setSelectedId(id);
     const province = provinces.find(p => p.id === id);
     if (province) {
       setDragOffset({
@@ -89,6 +94,8 @@ export default function MapEditorScreen({ onBack }: Props) {
           ...p,
           centerX: updated.centerX,
           centerY: updated.centerY,
+          width: updated.width,
+          height: updated.height,
           labelX: updated.labelX,
           labelY: updated.labelY,
         };
@@ -164,8 +171,8 @@ export default function MapEditorScreen({ onBack }: Props) {
               <g key={province.id}>
                 <polygon
                   points={points}
-                  fill={draggingId === province.id ? 'rgba(74, 138, 188, 0.6)' : 'rgba(74, 138, 188, 0.3)'}
-                  stroke={draggingId === province.id ? '#4a8abc' : '#3a6a9a'}
+                  fill={selectedId === province.id ? 'rgba(74, 138, 188, 0.6)' : draggingId === province.id ? 'rgba(74, 138, 188, 0.5)' : 'rgba(74, 138, 188, 0.3)'}
+                  stroke={selectedId === province.id ? '#7ab8e8' : draggingId === province.id ? '#4a8abc' : '#3a6a9a'}
                   strokeWidth="2"
                   style={{ cursor: 'move', transition: 'fill 0.15s' }}
                   onMouseDown={(e) => handleMouseDown(e, province.id)}
@@ -187,6 +194,70 @@ export default function MapEditorScreen({ onBack }: Props) {
           })}
         </svg>
         <ZoomControls vb={vb} onVbChange={setVb} />
+
+        {selectedProvince && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'rgba(15, 20, 35, 0.95)',
+              border: '1px solid rgba(74, 138, 188, 0.5)',
+              borderRadius: 2,
+              p: 2,
+              minWidth: 200,
+              zIndex: 20,
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography sx={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                {selectedProvince.name}
+              </Typography>
+              <IconButton size="small" onClick={() => setSelectedId(null)} sx={{ color: '#8aa0b8' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <TextField
+                label="横幅"
+                type="number"
+                size="small"
+                value={selectedProvince.width}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v > 0) {
+                    setProvinces(prev => prev.map(p => p.id === selectedId ? { ...p, width: v } : p));
+                  }
+                }}
+                slotProps={{ htmlInput: { min: 1, style: { color: '#cce0f5' } }, inputLabel: { style: { color: '#8aa0b8' } } }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'rgba(74,138,188,0.4)' }, '&:hover fieldset': { borderColor: 'rgba(74,138,188,0.7)' }, '&.Mui-focused fieldset': { borderColor: '#4a8abc' } },
+                }}
+              />
+              <TextField
+                label="縦幅"
+                type="number"
+                size="small"
+                value={selectedProvince.height}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v > 0) {
+                    setProvinces(prev => prev.map(p => p.id === selectedId ? { ...p, height: v } : p));
+                  }
+                }}
+                slotProps={{ htmlInput: { min: 1, style: { color: '#cce0f5' } }, inputLabel: { style: { color: '#8aa0b8' } } }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'rgba(74,138,188,0.4)' }, '&:hover fieldset': { borderColor: 'rgba(74,138,188,0.7)' }, '&.Mui-focused fieldset': { borderColor: '#4a8abc' } },
+                }}
+              />
+            </Box>
+            <Typography sx={{ color: '#8aa0b8', fontSize: '0.75rem' }}>
+              位置: ({selectedProvince.centerX.toFixed(1)}, {selectedProvince.centerY.toFixed(1)})
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Box>
   );

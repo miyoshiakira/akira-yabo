@@ -245,7 +245,7 @@
     "nameReading": "もがみよしあき",
     "clan": "最上氏",
     "color": "#6a4a2a",
-    "homeProvinceId": "dewa",
+    "homeProvinceId": "u_zen",
     "stats": {
       "military": 85,
       "politics": 92,
@@ -823,21 +823,6 @@
     },
     "description": "安房を支配した里見氏。房総半島を拠点に北条氏と激しく争った。「房総の虎」の異名を持つ。",
     "era": "1550年"
-  },
-  {
-    "id": "iwaki_tsunetaka",
-    "name": "岩城常隆",
-    "nameReading": "いわきつねたか",
-    "clan": "岩城氏",
-    "color": "#6a5a5a",
-    "homeProvinceId": "iwaki",
-    "stats": {
-      "military": 68,
-      "politics": 65,
-      "charisma": 70
-    },
-    "description": "磐城を支配した岩城氏。東北の有力氏族で、伊達氏や佐竹氏と関わった。",
-    "era": "1560年"
   },
   {
     "id": "ando",
