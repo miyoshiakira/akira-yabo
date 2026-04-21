@@ -1,4 +1,10 @@
-import type { RecruitedRetainerData, MyPrisonerData } from '../data/retainerData';
+import type { RecruitedRetainerData, MyPrisonerData, RetainerExpData } from '../data/retainerData';
+
+export interface EnemyDaimyoState {
+  soldiers: number;
+  food: number;
+  gold: number;
+}
 
 export interface SaveDataProps {
   id: number;
@@ -20,6 +26,9 @@ export interface SaveDataProps {
   retainerAssignments: Record<string, number>;
   recruitedRetainers: RecruitedRetainerData[];
   myPrisoners: MyPrisonerData[];
+  retainerExp: RetainerExpData[];
+  enemyDaimyoState: Record<string, EnemyDaimyoState>;
+  provinceOwnership: Record<string, string>;
 }
 
 export class SaveData {
@@ -41,6 +50,9 @@ export class SaveData {
   retainerAssignments: Record<string, number>;
   recruitedRetainers: RecruitedRetainerData[];
   myPrisoners: MyPrisonerData[];
+  retainerExp: RetainerExpData[];
+  enemyDaimyoState: Record<string, EnemyDaimyoState>;
+  provinceOwnership: Record<string, string>;
 
   constructor(props: Partial<SaveDataProps> & { id: number }) {
     this.id = props.id;
@@ -61,6 +73,9 @@ export class SaveData {
     this.retainerAssignments = props.retainerAssignments ?? {};
     this.recruitedRetainers = props.recruitedRetainers ?? [];
     this.myPrisoners = props.myPrisoners ?? [];
+    this.retainerExp = props.retainerExp ?? [];
+    this.enemyDaimyoState = props.enemyDaimyoState ?? {};
+    this.provinceOwnership = props.provinceOwnership ?? {};
   }
 
   get playtimeFormatted(): string {
@@ -90,6 +105,9 @@ export class SaveData {
       retainerAssignments: this.retainerAssignments,
       recruitedRetainers: this.recruitedRetainers,
       myPrisoners: this.myPrisoners,
+      retainerExp: this.retainerExp,
+      enemyDaimyoState: this.enemyDaimyoState,
+      provinceOwnership: this.provinceOwnership,
     };
   }
 

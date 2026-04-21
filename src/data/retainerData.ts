@@ -10,6 +10,69 @@ export interface Retainer {
   };
 }
 
+// ランク（階級）定義
+export type RankId =
+  | 'gocho'           // 伍長
+  | 'hyakuninsho'     // 百人将
+  | 'sanbyakuninsho'  // 三百人将
+  | 'gohyakuninsho'   // 五百人将
+  | 'senninsho'       // 千人将
+  | 'nisenninsho'     // 二千人将
+  | 'sansenninsho'    // 三千人将
+  | 'gosenninsho'     // 五千人将
+  | 'shogun'          // 将軍
+  | 'daishogun'       // 大将軍
+  | 'shodaimyo'       // 小大名
+  | 'daimyo';         // 大名
+
+export interface RankDefinition {
+  id: RankId;
+  name: string;
+  maxSoldiers: number;
+  requiredExp: number;
+}
+
+export const RANKS: RankDefinition[] = [
+  { id: 'gocho',          name: '伍長',       maxSoldiers: 5,      requiredExp: 0 },
+  { id: 'hyakuninsho',    name: '百人将',     maxSoldiers: 100,    requiredExp: 100 },
+  { id: 'sanbyakuninsho', name: '三百人将',   maxSoldiers: 300,    requiredExp: 300 },
+  { id: 'gohyakuninsho',  name: '五百人将',   maxSoldiers: 500,    requiredExp: 600 },
+  { id: 'senninsho',      name: '千人将',     maxSoldiers: 1000,   requiredExp: 1000 },
+  { id: 'nisenninsho',    name: '二千人将',   maxSoldiers: 2000,   requiredExp: 2000 },
+  { id: 'sansenninsho',   name: '三千人将',   maxSoldiers: 3000,   requiredExp: 3500 },
+  { id: 'gosenninsho',    name: '五千人将',   maxSoldiers: 5000,   requiredExp: 5500 },
+  { id: 'shogun',         name: '将軍',       maxSoldiers: 10000,  requiredExp: 10000 },
+  { id: 'daishogun',      name: '大将軍',     maxSoldiers: 50000,  requiredExp: 25000 },
+  { id: 'shodaimyo',      name: '小大名',     maxSoldiers: 100000, requiredExp: 50000 },
+  { id: 'daimyo',         name: '大名',       maxSoldiers: 200000, requiredExp: 100000 },
+];
+
+// 経験値からランクを取得
+export function getRankByExp(exp: number): RankDefinition {
+  let rank = RANKS[0];
+  for (const r of RANKS) {
+    if (exp >= r.requiredExp) {
+      rank = r;
+    } else {
+      break;
+    }
+  }
+  return rank;
+}
+
+// 次のランクを取得（最大ランクの場合はnull）
+export function getNextRank(currentRank: RankDefinition): RankDefinition | null {
+  const idx = RANKS.findIndex((r) => r.id === currentRank.id);
+  if (idx < 0 || idx >= RANKS.length - 1) return null;
+  return RANKS[idx + 1];
+}
+
+// 武将の経験値データ
+export interface RetainerExpData {
+  retainerId: string;
+  exp: number;
+}
+
 export interface RecruitedRetainerData {
   id: string;
   name: string;
