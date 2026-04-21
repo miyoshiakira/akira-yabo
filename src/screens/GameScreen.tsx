@@ -717,6 +717,22 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
         eGold -= 200;
       }
 
+      // 武将鍛錬：敵武将も経験値を獲得
+      const eRetainers = getRetainersByDaimyo(eDaimyoId);
+      let eRetExp = [...(prev.retainerExp ?? [])];
+      if (eRetainers.length > 0) {
+        const eRBonus = 1 + Math.min(0.5, eRetainers.length * 0.05);
+        for (const r of eRetainers) {
+          const idx = eRetExp.findIndex(e => e.retainerId === r.id);
+          const gain = Math.floor((15 + Math.random() * 30) * eRBonus);
+          if (idx >= 0) {
+            eRetExp[idx] = { ...eRetExp[idx], exp: eRetExp[idx].exp + gain };
+          } else {
+            eRetExp.push({ retainerId: r.id, exp: gain });
+          }
+        }
+      }
+
       // 戦：軍事力が高いほど戦を仕掛ける確率UP
       const warChance = Math.min(0.6, eDaimyoData.stats.military / 200);
       if (Math.random() < warChance && eSoldiers > 300) {
@@ -764,7 +780,7 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
         }
       }
 
-      newEnemyState[eDaimyoId] = { soldiers: Math.max(0, eSoldiers), food: eFood, gold: eGold };
+      newEnemyState[eDaimyoId] = { soldiers: Math.max(0, eSoldiers), food: eFood, gold: eGold, retainerExp: eRetExp };
     }
 
     const newState: GameState = {
@@ -1364,7 +1380,6 @@ export default function GameScreen({ save, onReturnToTitle }: Props) {
           targetProvinceId={battleScreenData.targetProvinceId}
           playerOwnedProvinces={state.ownedProvinces}
           recruitedRetainers={state.recruitedRetainers}
-          retainerExp={state.retainerExp}
           enemyDaimyoState={state.enemyDaimyoState}
           provinceOwnership={state.provinceOwnership}
           onFinish={handleBattleFinish}

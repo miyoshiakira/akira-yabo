@@ -838,5 +838,20 @@
     },
     "description": "羽後を支配した安東氏。津軽地方を拠点に、蝦夷との交易で栄えた。",
     "era": "1570年"
+  },
+  {
+    "id": "ema",
+    "name": "江馬時国",
+    "nameReading": "えまとくに",
+    "clan": "江馬氏",
+    "color": "#5a6a4a",
+    "homeProvinceId": "hida",
+    "stats": {
+      "military": 62,
+      "politics": 65,
+      "charisma": 58
+    },
+    "description": "飛騨を支配した江馬氏。飛騨の小大名として武田氏や上杉氏と関わり、国内の内紛に翻弄された。",
+    "era": "1560年"
   }
 ]

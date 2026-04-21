@@ -349,6 +349,10 @@ export const RETAINERS: Retainer[] = [
   // 安東愛季
   { id: 'ando_sanesue', name: '安東実季', nameReading: 'あんどうさねすえ', daimyoId: 'ando', stats: { command: 62, intelligence: 68, loyalty: 78 } },
   { id: 'minato_nobuchika', name: '湊信愛', nameReading: 'みなとのぶちか', daimyoId: 'ando', stats: { command: 58, intelligence: 62, loyalty: 72 } },
+
+  // 江馬時国
+  { id: 'ema_tokimune', name: '江馬時政', nameReading: 'えまときまさ', daimyoId: 'ema', stats: { command: 62, intelligence: 65, loyalty: 75 } },
+  { id: 'muroga_hidetsuna', name: '室賀秀綱', nameReading: 'むろがひでつな', daimyoId: 'ema', stats: { command: 58, intelligence: 60, loyalty: 72 } },
 ];
 
 export const INITIAL_PARAMS: Record<string, DaimyoInitialParams> = {
@@ -408,6 +412,7 @@ export const INITIAL_PARAMS: Record<string, DaimyoInitialParams> = {
   masaki:    { year: 1550, month: 1, soldiers:  300, food: 300,  gold: 250, security: 55, population:  5000 },
   satomi:    { year: 1550, month: 1, soldiers:  400, food: 400,  gold: 300, security: 60, population:  6000 },
   ando:      { year: 1570, month: 1, soldiers:  300, food: 300,  gold: 250, security: 55, population:  5000 },
+  ema:       { year: 1560, month: 1, soldiers:  200, food: 300,  gold: 200, security: 50, population:  4000 },
 };
 
 export function getRetainersByDaimyo(daimyoId: string): Retainer[] {

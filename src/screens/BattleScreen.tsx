@@ -3,7 +3,7 @@ import { Box, Button, Chip, LinearProgress, Typography } from '@mui/material';
 import { keyframes } from '@emotion/react';
 import { getDaimyo, getProvince, PROVINCES, DAIMYO_LIST } from '../data/gameData';
 import { getRetainersByDaimyo, getRankByExp } from '../data/retainerData';
-import type { Retainer, RecruitedRetainerData, RetainerExpData } from '../data/retainerData';
+import type { Retainer, RecruitedRetainerData } from '../data/retainerData';
 import type { EnemyDaimyoState } from '../lib/saveData';
 
 export interface BattleOutcome {
@@ -37,7 +37,6 @@ interface Props {
   targetProvinceId: string;
   playerOwnedProvinces: string[];
   recruitedRetainers: RecruitedRetainerData[];
-  retainerExp: RetainerExpData[];
   enemyDaimyoState: Record<string, EnemyDaimyoState>;
   provinceOwnership: Record<string, string>;
   onFinish: (result: BattleOutcome) => void;
@@ -72,7 +71,7 @@ function makeGarrisonRetainer(daimyoId: string, idx: number): Retainer {
 
 export default function BattleScreen({
   playerDaimyoId, playerRetainers, playerAssignments, targetProvinceId,
-  playerOwnedProvinces, recruitedRetainers, retainerExp, enemyDaimyoState, provinceOwnership, onFinish,
+  playerOwnedProvinces, recruitedRetainers, enemyDaimyoState, provinceOwnership, onFinish,
 }: Props) {
   const pDaimyo = getDaimyo(playerDaimyoId)!;
   const tProvince = getProvince(targetProvinceId)!;
@@ -95,16 +94,17 @@ export default function BattleScreen({
     return Array.from({ length: garrisonCount }, (_, i) => makeGarrisonRetainer(eDaimyoId, i + 1));
   }, [eRetainers, eBaseSoldiers, eDaimyoId]);
 
+  const eRetExp = useMemo(() => eStored?.retainerExp ?? [], [eStored]);
   const eSoldierCounts = useMemo(() => {
     const c: Record<string, number> = {};
     const total = Math.max(200, eBaseSoldiers);
     for (const r of eAllRetainers) {
       const isGarrison = r.id.startsWith('__garrison_');
-      const rank = isGarrison ? { maxSoldiers: 1500 } : getRankByExp(retainerExp.find(e => e.retainerId === r.id)?.exp ?? 0);
+      const rank = isGarrison ? { maxSoldiers: 1500 } : getRankByExp(eRetExp.find(e => e.retainerId === r.id)?.exp ?? 0);
       c[r.id] = Math.min(rank.maxSoldiers, Math.floor(total * (0.8 + Math.random() * 0.4) / Math.max(1, eAllRetainers.length)));
     }
     return c;
-  }, [eAllRetainers, eBaseSoldiers, retainerExp]);
+  }, [eAllRetainers, eBaseSoldiers, eRetExp]);
 
   // 大名滅亡判定：対象大名の全領地がプレイヤー支配下になるか
   const isDaimyoDestroyed = useMemo(() => {

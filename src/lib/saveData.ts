@@ -4,6 +4,7 @@ export interface EnemyDaimyoState {
   soldiers: number;
   food: number;
   gold: number;
+  retainerExp?: RetainerExpData[];
 }
 
 export interface SaveDataProps {
